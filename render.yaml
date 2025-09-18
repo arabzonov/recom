@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: recom-mqxd
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: NGROK_URL
+        value: https://vigorously-loving-pug.ngrok-free.app
+    healthCheckPath: /api/health
+    autoDeploy: true
+    branch: main

@@ -40,8 +40,8 @@ app.use('/api/', limiter);
 // CORS configuration
 app.use(cors({
   origin: process.env.NODE_ENV === 'production' 
-    ? ['https://yourdomain.com'] 
-    : ['http://localhost:3000', 'http://localhost:5173'],
+    ? ['https://recom-mqxd.onrender.com', 'https://vigorously-loving-pug.ngrok-free.app'] 
+    : ['http://localhost:3000', 'http://localhost:5173', 'https://vigorously-loving-pug.ngrok-free.app'],
   credentials: true
 }));
 
@@ -68,6 +68,15 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     version: process.env.npm_package_version || '1.0.0'
   });
+});
+
+// Redirect to ngrok URL when running on Render
+app.get('/', (req, res) => {
+  if (process.env.NODE_ENV === 'production' && process.env.NGROK_URL) {
+    return res.redirect(301, process.env.NGROK_URL);
+  }
+  // In development, serve the React app normally
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
 
 // Serve React app for all non-API routes
