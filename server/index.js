@@ -53,20 +53,25 @@ if (isRenderProduction) {
 
   // Rate limiting
   const limiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
+    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes default
+    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // 100 requests default
     message: 'Too many requests from this IP, please try again later.'
   });
   app.use('/api/', limiter);
 
   // CORS configuration
+  const allowedOrigins = process.env.ALLOWED_ORIGINS 
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : ['http://localhost:3000', 'http://localhost:5173'];
+  
   app.use(cors({
-    origin: ['http://localhost:3000', 'http://localhost:5173', 'https://vigorously-loving-pug.ngrok-free.app'],
+    origin: allowedOrigins,
     credentials: true
   }));
 
   // Logging
-  app.use(morgan('combined'));
+  const logLevel = process.env.LOG_LEVEL || 'combined';
+  app.use(morgan(logLevel));
 
   // Body parsing middleware
   app.use(express.json({ limit: '10mb' }));
