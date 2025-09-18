@@ -10,21 +10,28 @@ if (!fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// Create database connection
-const db = new sqlite3.Database(DB_PATH, (err) => {
-  if (err) {
-    console.error('Error opening database:', err.message);
-  } else {
-    console.log('Connected to SQLite database');
-  }
-});
+// Create database connection (only in development)
+let db = null;
 
-// Enable foreign keys
-db.run('PRAGMA foreign_keys = ON');
+const createDatabaseConnection = () => {
+  if (!db) {
+    db = new sqlite3.Database(DB_PATH, (err) => {
+      if (err) {
+        console.error('Error opening database:', err.message);
+      } else {
+        console.log('Connected to SQLite database');
+        // Enable foreign keys
+        db.run('PRAGMA foreign_keys = ON');
+      }
+    });
+  }
+  return db;
+};
 
 // Database initialization
 const initializeDatabase = async () => {
   return new Promise((resolve, reject) => {
+    const db = createDatabaseConnection();
     db.serialize(() => {
       // Create stores table
       db.run(`
@@ -153,6 +160,7 @@ const initializeDatabase = async () => {
 // Database query helper functions
 const dbQuery = (sql, params = []) => {
   return new Promise((resolve, reject) => {
+    const db = createDatabaseConnection();
     db.all(sql, params, (err, rows) => {
       if (err) {
         reject(err);
@@ -165,6 +173,7 @@ const dbQuery = (sql, params = []) => {
 
 const dbRun = (sql, params = []) => {
   return new Promise((resolve, reject) => {
+    const db = createDatabaseConnection();
     db.run(sql, params, function(err) {
       if (err) {
         reject(err);
@@ -177,6 +186,7 @@ const dbRun = (sql, params = []) => {
 
 const dbGet = (sql, params = []) => {
   return new Promise((resolve, reject) => {
+    const db = createDatabaseConnection();
     db.get(sql, params, (err, row) => {
       if (err) {
         reject(err);
@@ -190,19 +200,24 @@ const dbGet = (sql, params = []) => {
 // Close database connection
 const closeDatabase = () => {
   return new Promise((resolve) => {
-    db.close((err) => {
-      if (err) {
-        console.error('Error closing database:', err.message);
-      } else {
-        console.log('Database connection closed');
-      }
+    if (db) {
+      db.close((err) => {
+        if (err) {
+          console.error('Error closing database:', err.message);
+        } else {
+          console.log('Database connection closed');
+        }
+        db = null;
+        resolve();
+      });
+    } else {
       resolve();
-    });
+    }
   });
 };
 
 module.exports = {
-  db,
+  createDatabaseConnection,
   initializeDatabase,
   dbQuery,
   dbRun,
