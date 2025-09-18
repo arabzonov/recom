@@ -1,0 +1,53 @@
+#!/usr/bin/env node
+
+/**
+ * Redirect Server - Pure redirect proxy for Render deployment
+ * This server has NO business logic, NO database, NO app dependencies
+ * It only redirects all requests to the ngrok URL
+ */
+
+const express = require('express');
+const morgan = require('morgan');
+require('dotenv').config();
+
+const app = express();
+const PORT = process.env.PORT || 10000;
+
+// Get ngrok URL from environment
+const NGROK_URL = process.env.NGROK_URL;
+
+if (!NGROK_URL) {
+  console.error('❌ NGROK_URL environment variable is required');
+  process.exit(1);
+}
+
+console.log('🔄 Starting Redirect Server');
+console.log(`📡 Redirecting all requests to: ${NGROK_URL}`);
+
+// Basic logging
+app.use(morgan('combined'));
+
+// Redirect ALL requests to ngrok URL
+app.all('*', (req, res) => {
+  const fullUrl = `${NGROK_URL}${req.originalUrl}`;
+  console.log(`🔄 Redirecting ${req.method} ${req.originalUrl} to ${fullUrl}`);
+  res.redirect(301, fullUrl);
+});
+
+// Start server
+app.listen(PORT, () => {
+  console.log(`🚀 Redirect Server running on port ${PORT}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV || 'production'}`);
+  console.log(`🔄 All requests will be forwarded to: ${NGROK_URL}`);
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down redirect server gracefully');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down redirect server gracefully');
+  process.exit(0);
+});

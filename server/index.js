@@ -15,91 +15,71 @@ const analyticsRoutes = require('./routes/analytics');
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Check if we're running on Render in production mode
-const isRenderProduction = process.env.NODE_ENV === 'production' && process.env.NGROK_URL;
+// Main Application Server - Development Mode Only
+console.log('🚀 Starting Main Application Server');
 
-if (isRenderProduction) {
-  // RENDER PRODUCTION MODE: Redirect ALL requests to ngrok
-  console.log('🔄 Running in Render redirect mode - all requests will be forwarded to ngrok');
-  
-  // Basic middleware for logging
-  app.use(morgan('combined'));
-  
-  // Redirect ALL requests to ngrok URL
-  app.all('*', (req, res) => {
-    const ngrokUrl = process.env.NGROK_URL;
-    const fullUrl = `${ngrokUrl}${req.originalUrl}`;
-    console.log(`🔄 Redirecting ${req.method} ${req.originalUrl} to ${fullUrl}`);
-    res.redirect(301, fullUrl);
-  });
-  
-} else {
-  // DEVELOPMENT MODE: Run full application
-  console.log('🚀 Running in development mode - full application logic');
-  
-  // Security middleware
-  app.use(helmet({
-    contentSecurityPolicy: {
-      directives: {
-        defaultSrc: ["'self'"],
-        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-        fontSrc: ["'self'", "https://fonts.gstatic.com"],
-        scriptSrc: ["'self'", "https://app.ecwid.com"],
-        connectSrc: ["'self'", "https://app.ecwid.com"],
-        imgSrc: ["'self'", "data:", "https:"],
-      },
+// Security middleware
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      scriptSrc: ["'self'", "https://app.ecwid.com"],
+      connectSrc: ["'self'", "https://app.ecwid.com"],
+      imgSrc: ["'self'", "data:", "https:"],
     },
-  }));
+  },
+}));
 
-  // Rate limiting
-  const limiter = rateLimit({
-    windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes default
-    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // 100 requests default
-    message: 'Too many requests from this IP, please try again later.'
+// Rate limiting
+const limiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes default
+  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // 100 requests default
+  message: 'Too many requests from this IP, please try again later.'
+});
+app.use('/api/', limiter);
+
+// CORS configuration
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',')
+  : ['http://localhost:3000', 'http://localhost:5173'];
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
+
+// Logging
+const logLevel = process.env.LOG_LEVEL || 'combined';
+app.use(morgan(logLevel));
+
+// Body parsing middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Serve static files from the React app build
+app.use(express.static(path.join(__dirname, '../dist')));
+
+// API Routes
+app.use('/api/ecwid', ecwidRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/orders', orderRoutes);
+app.use('/api/analytics', analyticsRoutes);
+
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    version: process.env.npm_package_version || '1.0.0'
   });
-  app.use('/api/', limiter);
+});
 
-  // CORS configuration
-  const allowedOrigins = process.env.ALLOWED_ORIGINS 
-    ? process.env.ALLOWED_ORIGINS.split(',')
-    : ['http://localhost:3000', 'http://localhost:5173'];
-  
-  app.use(cors({
-    origin: allowedOrigins,
-    credentials: true
-  }));
-
-  // Logging
-  const logLevel = process.env.LOG_LEVEL || 'combined';
-  app.use(morgan(logLevel));
-
-  // Body parsing middleware
-  app.use(express.json({ limit: '10mb' }));
-  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-
-  // Serve static files from the React app build
-  app.use(express.static(path.join(__dirname, '../dist')));
-
-  // API Routes
-  app.use('/api/ecwid', ecwidRoutes);
-  app.use('/api/products', productRoutes);
-  app.use('/api/orders', orderRoutes);
-  app.use('/api/analytics', analyticsRoutes);
-
-  // Health check endpoint
-  app.get('/api/health', (req, res) => {
-    res.json({ 
-      status: 'OK', 
-      timestamp: new Date().toISOString(),
-      version: process.env.npm_package_version || '1.0.0'
-    });
-  });
-
-  // Serve React app for all non-API routes
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
-  });
-}
+// Serve React app for all non-API routes
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../dist/index.html'));
+});
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -118,21 +98,13 @@ app.use((req, res) => {
 // Initialize database and start server
 const startServer = async () => {
   try {
-    if (!isRenderProduction) {
-      // Only initialize database in development mode
-      await initializeDatabase();
-      console.log('✅ Database initialized successfully');
-    }
+    await initializeDatabase();
+    console.log('✅ Database initialized successfully');
     
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);
       console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-      
-      if (isRenderProduction) {
-        console.log(`🔄 Redirect mode: All requests will be forwarded to ${process.env.NGROK_URL}`);
-      } else {
-        console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
-      }
+      console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);

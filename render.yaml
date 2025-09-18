@@ -3,8 +3,8 @@ services:
     name: recom-mqxd
     env: node
     plan: free
-    buildCommand: npm install && npm run build
-    startCommand: npm start
+    buildCommand: npm install
+    startCommand: npm run start:production
     envVars:
       - key: NODE_ENV
         value: production

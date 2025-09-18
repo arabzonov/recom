@@ -10,6 +10,8 @@
     "build": "npm run client:build && npm run db:migrate",
     "client:build": "vite build",
     "start": "node server/index.js",
+    "start:redirect": "node redirect-server.js",
+    "start:production": "npm run start:redirect",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "db:migrate": "node server/scripts/migrate.js",
