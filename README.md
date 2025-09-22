@@ -1,17 +1,14 @@
 # Ecwid Plugin
 
-A modern full-stack Ecwid plugin built with Node.js, Express, React, SQLite, and Tailwind CSS. This plugin provides a comprehensive dashboard for managing your Ecwid store with enhanced analytics, product management, and customer insights.
+A modern full-stack Ecwid plugin built with Node.js, Express, React, SQLite, and Tailwind CSS. This plugin provides OAuth authentication and store management for your Ecwid store.
 
 ## 🚀 Features
 
-- **📊 Advanced Analytics Dashboard** - Real-time insights into store performance
-- **🛍️ Product Management** - Enhanced product listing, editing, and bulk operations
-- **📋 Order Management** - Comprehensive order tracking and status management
-- **👥 Customer Insights** - Customer behavior analytics and segmentation
-- **⚡ Real-time Updates** - Live data synchronization with Ecwid API
+- **🔐 OAuth Authentication** - Secure OAuth 2.0 flow with Ecwid
+- **🏪 Store Management** - Connect and manage your Ecwid store
 - **📱 Responsive Design** - Mobile-first design with Tailwind CSS
-- **🔒 Secure API** - JWT authentication and rate limiting
-- **💾 Local Database** - SQLite for fast data access and caching
+- **🔒 Secure API** - Rate limiting and secure token management
+- **💾 Local Database** - SQLite for store data and OAuth states
 
 ## 🛠️ Tech Stack
 
@@ -19,7 +16,7 @@ A modern full-stack Ecwid plugin built with Node.js, Express, React, SQLite, and
 - **Frontend**: React 18 + Vite
 - **Database**: SQLite3
 - **Styling**: Tailwind CSS
-- **Authentication**: JWT
+- **Authentication**: OAuth 2.0
 - **API Integration**: Ecwid REST API
 - **Development**: Hot reload, ESLint, TypeScript support
 
@@ -115,11 +112,7 @@ NODE_ENV=development
 ECWID_CLIENT_ID=your_client_id_here
 ECWID_CLIENT_SECRET=your_client_secret_here
 ECWID_STORE_ID=your_store_id_here
-ECWID_WEBHOOK_SECRET=your_webhook_secret_here
 
-# JWT Configuration
-JWT_SECRET=your_jwt_secret_here
-JWT_EXPIRES_IN=7d
 
 # Database Configuration
 DB_PATH=./data/ecwid_plugin.db
@@ -142,37 +135,19 @@ ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
 
 #### Store Management
 - `GET /api/ecwid/store/:storeId` - Get store information
-- `GET /api/ecwid/store/:storeId/stats` - Get store statistics
+- `POST /api/ecwid/store` - Create or update store configuration
 
-#### Products
-- `GET /api/products` - List products with filtering
-- `GET /api/products/:id` - Get product details
-- `PUT /api/products/:id` - Update product
-- `DELETE /api/products/:id` - Delete product
-- `PUT /api/products/bulk` - Bulk update products
-
-#### Orders
-- `GET /api/orders` - List orders with filtering
-- `GET /api/orders/:id` - Get order details
-- `PUT /api/orders/:id` - Update order
-- `GET /api/orders/stats/summary` - Get order statistics
-
-#### Analytics
-- `GET /api/analytics` - Get analytics data
-- `GET /api/analytics/summary` - Get analytics summary
-- `GET /api/analytics/realtime` - Get real-time analytics
-- `POST /api/analytics` - Create analytics event
+#### OAuth Authentication
+- `GET /api/oauth/status/:storeId` - Check OAuth authentication status
+- `GET /api/oauth/auth/:storeId` - Initiate OAuth flow
+- `GET /api/oauth/callback` - Handle OAuth callback
 
 ### Frontend Components
 
 #### Core Components
-- `Header` - Navigation header with user menu
-- `Sidebar` - Navigation sidebar with menu items
-- `Dashboard` - Main dashboard with statistics
-- `Products` - Product management interface
-- `Orders` - Order management interface
-- `Analytics` - Analytics dashboard
-- `Settings` - Plugin configuration
+- `OAuthButton` - OAuth authentication button
+- `StoreSetup` - Store setup and configuration
+- `Settings` - Plugin configuration and OAuth status
 
 #### Custom Hooks
 - `useEcwid` - Ecwid API integration hook
@@ -211,13 +186,12 @@ npm start
 
 ### Database Operations
 ```bash
-npm run db:migrate  # Initialize database
-npm run db:seed     # Seed with sample data
+npm run sync:all    # Sync all stores data
 ```
 
 ## 🔒 Security Features
 
-- **JWT Authentication** - Secure API access
+- **OAuth Authentication** - Secure API access
 - **Rate Limiting** - Prevent API abuse
 - **CORS Protection** - Configured for specific origins
 - **Helmet.js** - Security headers

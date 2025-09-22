@@ -14,125 +14,74 @@ export const useEcwid = () => {
 export const EcwidProvider = ({ children }) => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [storeId, setStoreId] = useState(null);
-  const [api, setApi] = useState(null);
-  const [cart, setCart] = useState(null);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const initializeEcwid = () => {
-      if (window.Ecwid) {
-        window.Ecwid.OnAPILoaded.add(() => {
-          console.log('Ecwid API loaded successfully');
-          setIsLoaded(true);
-          setApi(window.Ecwid.API);
-          
-          // Auto-detect store ID using utility function
-          const detectedStoreId = detectStoreId();
-          
-          if (detectedStoreId) {
-            setStoreId(detectedStoreId);
-            console.log('Store ID detected:', detectedStoreId);
-          } else {
-            console.warn('Could not auto-detect store ID. Please set it manually in settings.');
-          }
-        });
+  console.log('🏗️ EcwidProvider rendering with state:', { isLoaded, storeId, error });
 
-        // Listen for cart updates
-        if (window.Ecwid.Cart) {
-          window.Ecwid.Cart.addListener('cartUpdated', (cartData) => {
-            setCart(cartData);
-          });
-        }
+  useEffect(() => {
+    console.log('🔄 EcwidProvider useEffect triggered');
+    
+    const initializeStore = () => {
+      console.log('🔍 Initializing store detection...');
+      console.log('🔍 Current localStorage state:', {
+        ecwid_store_id: localStorage.getItem('ecwid_store_id'),
+        ecwid_store_configured: localStorage.getItem('ecwid_store_configured'),
+        ecwid_store_config: localStorage.getItem('ecwid_store_config')
+      });
+      
+      // Try to detect store ID using utility function
+      console.log('🔍 Calling detectStoreId()...');
+      const detectedStoreId = detectStoreId();
+      console.log('🔍 detectStoreId() returned:', detectedStoreId);
+      
+      if (detectedStoreId) {
+        console.log('✅ Store ID detected via detectStoreId:', detectedStoreId);
+        setStoreId(detectedStoreId);
+        setIsLoaded(true);
+        setError(null);
+        console.log('✅ State updated: isLoaded=true, storeId=' + detectedStoreId);
       } else {
-        setError('Ecwid API not available');
-        console.warn('Ecwid API not found. Make sure the Ecwid script is loaded.');
+        // Check localStorage for manually set store ID
+        const storedStoreId = localStorage.getItem('ecwid_store_id');
+        console.log('🔍 Checking localStorage for storeId:', storedStoreId);
+        
+        if (storedStoreId) {
+          console.log('✅ Store ID found in localStorage:', storedStoreId);
+          setStoreId(storedStoreId);
+          setIsLoaded(true);
+          setError(null);
+          console.log('✅ State updated: isLoaded=true, storeId=' + storedStoreId);
+        } else {
+          console.log('❌ No store ID found anywhere');
+          setIsLoaded(true);
+          setError('No store ID found. Please configure your store.');
+          console.log('✅ State updated: isLoaded=true, error set');
+        }
       }
     };
 
-    // Initialize immediately if Ecwid is already loaded
-    if (window.Ecwid && window.Ecwid.API) {
-      setIsLoaded(true);
-      setApi(window.Ecwid.API);
-    } else {
-      initializeEcwid();
-    }
+    console.log('🔄 Calling initializeStore...');
+    initializeStore();
+    console.log('🔄 initializeStore completed');
   }, []);
 
-  const addToCart = (productId, quantity = 1, options = {}) => {
-    if (window.Ecwid && window.Ecwid.Cart) {
-      window.Ecwid.Cart.addProduct(productId, quantity, options);
-    } else {
-      console.warn('Ecwid Cart API not available');
-    }
-  };
+  console.log('🏗️ EcwidProvider about to render with final state:', { isLoaded, storeId, error });
 
-  const getCart = () => {
-    if (window.Ecwid && window.Ecwid.Cart) {
-      return window.Ecwid.Cart.getCart();
-    }
-    return null;
-  };
-
-  const openCart = () => {
-    if (window.Ecwid && window.Ecwid.Cart) {
-      window.Ecwid.Cart.open();
-    }
-  };
-
-  const getProduct = (productId) => {
-    if (api) {
-      return api.getProduct(productId);
-    }
-    return null;
-  };
-
-  const getProducts = (params = {}) => {
-    if (api) {
-      return api.getProducts(params);
-    }
-    return null;
-  };
-
-  const getCategories = () => {
-    if (api) {
-      return api.getCategories();
-    }
-    return null;
-  };
 
   const trackEvent = (eventName, eventData = {}) => {
-    // Send analytics event to our backend
-    fetch('/api/analytics', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        storeId,
-        eventType: eventName,
-        eventData,
-        userAgent: navigator.userAgent,
-        ipAddress: null // Will be set by server
-      })
-    }).catch(error => {
-      console.error('Error tracking event:', error);
-    });
+    console.log('📊 trackEvent called:', { eventName, eventData, storeId });
+    // Analytics tracking removed - no longer storing analytics data
   };
+
 
   const value = {
     isLoaded,
     storeId,
-    api,
-    cart,
     error,
-    addToCart,
-    getCart,
-    openCart,
-    getProduct,
-    getProducts,
-    getCategories,
     trackEvent
   };
+
+  console.log('🏗️ EcwidProvider providing value:', value);
 
   return (
     <EcwidContext.Provider value={value}>

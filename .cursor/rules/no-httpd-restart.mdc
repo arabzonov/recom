@@ -1,0 +1,5 @@
+---
+description: do not restart or test web server, no health checks - it's always running
+globs:
+alwaysApply: true
+---

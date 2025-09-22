@@ -7,15 +7,14 @@
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
     "server:dev": "nodemon server/index.js",
     "client:dev": "vite",
-    "build": "npm run client:build && npm run db:migrate",
+    "build": "npm run client:build",
     "client:build": "vite build",
     "start": "node server/index.js",
     "start:redirect": "node redirect-server.js",
     "start:production": "npm run start:redirect",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
-    "db:migrate": "node server/scripts/migrate.js",
-    "db:seed": "node server/scripts/seed.js"
+    "sync:all": "node scripts/background/sync-all-stores.js"
   },
   "keywords": [
     "ecwid",
@@ -39,6 +38,7 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
+    "p-queue": "^8.1.1",
     "react-router-dom": "^7.9.1",
     "sqlite3": "^5.1.6"
   },

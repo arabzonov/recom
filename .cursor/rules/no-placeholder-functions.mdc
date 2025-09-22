@@ -1,0 +1,5 @@
+---
+description:never add placeholder functions and code that is not currently used by the app, unless asked for
+globs:
+alwaysApply: true
+---

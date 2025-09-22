@@ -1,0 +1,5 @@
+---
+description:Never hardcode or default or fallback config values. If there is no value - show error.
+globs:
+alwaysApply: true
+---

@@ -1,58 +1,44 @@
 import React, { useState, useEffect } from 'react';
 import { useEcwid } from '../hooks/useEcwid';
+import OAuthButton from '../components/OAuthButton';
 import { 
-  CogIcon,
-  KeyIcon,
-  BellIcon,
   ShieldCheckIcon,
-  CloudIcon
+  CheckCircleIcon,
+  ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
 
 const Settings = () => {
   const { isLoaded, storeId, trackEvent } = useEcwid();
-  const [settings, setSettings] = useState({
-    storeName: '',
-    clientId: '',
-    clientSecret: '',
-    webhookSecret: '',
-    notifications: {
-      email: true,
-      push: false,
-      sms: false
-    },
-    features: {
-      analytics: true,
-      customFields: true,
-      inventoryTracking: true,
-      customerInsights: true
-    },
-    security: {
-      twoFactor: false,
-      sessionTimeout: 30,
-      ipWhitelist: []
-    }
-  });
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [oauthStatus, setOauthStatus] = useState(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
       try {
         setLoading(true);
         
-        // Fetch store settings
-        const response = await fetch(`/api/ecwid/store/${storeId}`);
-        const data = await response.json();
+        // Check for OAuth callback parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const oauthSuccess = urlParams.get('success');
+        const oauthError = urlParams.get('error');
         
-        if (data.success) {
-          setSettings(prev => ({
-            ...prev,
-            storeName: data.data.name || '',
-            clientId: data.data.clientId || '',
-            clientSecret: data.data.clientSecret || '',
-            webhookSecret: data.data.webhookSecret || ''
-          }));
+        if (oauthSuccess === 'oauth_complete') {
+          setMessage('Successfully connected to Ecwid!');
+          // Clean up URL parameters
+          window.history.replaceState({}, document.title, window.location.pathname);
+        } else if (oauthError) {
+          setMessage(`OAuth error: ${decodeURIComponent(oauthError)}`);
+          // Clean up URL parameters
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+        
+        // Check OAuth status first
+        const oauthResponse = await fetch(`/api/oauth/status/${storeId}`);
+        const oauthData = await oauthResponse.json();
+        
+        if (oauthData.success) {
+          setOauthStatus(oauthData);
         }
 
         trackEvent('settings_viewed', { storeId });
@@ -68,353 +54,57 @@ const Settings = () => {
     }
   }, [isLoaded, storeId, trackEvent]);
 
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      setMessage('');
-
-      // Save settings to backend
-      const response = await fetch(`/api/ecwid/store/${storeId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(settings)
-      });
-
-      if (response.ok) {
-        setMessage('Settings saved successfully!');
-        trackEvent('settings_updated', { storeId });
-        setTimeout(() => setMessage(''), 3000);
-      } else {
-        setMessage('Error saving settings');
-      }
-    } catch (error) {
-      console.error('Error saving settings:', error);
-      setMessage('Error saving settings');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleInputChange = (section, field, value) => {
-    setSettings(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [field]: value
-      }
-    }));
-  };
-
-  const handleNestedInputChange = (section, subsection, field, value) => {
-    setSettings(prev => ({
-      ...prev,
-      [section]: {
-        ...prev[section],
-        [subsection]: {
-          ...prev[section][subsection],
-          [field]: value
-        }
-      }
-    }));
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="spinner w-8 h-8"></div>
+        <p className="ml-3 text-gray-600">Loading settings...</p>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="mt-1 text-sm text-gray-500">
-          Configure your Ecwid plugin settings
-        </p>
-      </div>
-
-      {/* Success/Error Message */}
+      <h1 className="text-3xl font-bold text-gray-900">Settings</h1>
+      
       {message && (
-        <div className={`p-4 rounded-md ${
-          message.includes('successfully') 
-            ? 'bg-green-50 text-green-800 border border-green-200' 
-            : 'bg-red-50 text-red-800 border border-red-200'
-        }`}>
+        <div className="alert alert-info">
           {message}
         </div>
       )}
 
-      {/* Store Configuration */}
-      <div className="card">
-        <div className="card-header">
-          <div className="flex items-center">
-            <CloudIcon className="h-5 w-5 text-gray-400 mr-2" />
-            <h3 className="text-lg font-medium text-gray-900">Store Configuration</h3>
-          </div>
-        </div>
-        <div className="card-body space-y-4">
-          <div>
-            <label className="form-label">Store Name</label>
-            <input
-              type="text"
-              value={settings.storeName}
-              onChange={(e) => setSettings(prev => ({ ...prev, storeName: e.target.value }))}
-              className="form-input"
-              placeholder="Enter store name"
-            />
-          </div>
-          
-          <div>
-            <label className="form-label">Client ID</label>
-            <input
-              type="text"
-              value={settings.clientId}
-              onChange={(e) => setSettings(prev => ({ ...prev, clientId: e.target.value }))}
-              className="form-input"
-              placeholder="Enter Ecwid Client ID"
-            />
-          </div>
-          
-          <div>
-            <label className="form-label">Client Secret</label>
-            <input
-              type="password"
-              value={settings.clientSecret}
-              onChange={(e) => setSettings(prev => ({ ...prev, clientSecret: e.target.value }))}
-              className="form-input"
-              placeholder="Enter Ecwid Client Secret"
-            />
-          </div>
-          
-          <div>
-            <label className="form-label">Webhook Secret</label>
-            <input
-              type="password"
-              value={settings.webhookSecret}
-              onChange={(e) => setSettings(prev => ({ ...prev, webhookSecret: e.target.value }))}
-              className="form-input"
-              placeholder="Enter webhook secret for security"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Notifications */}
-      <div className="card">
-        <div className="card-header">
-          <div className="flex items-center">
-            <BellIcon className="h-5 w-5 text-gray-400 mr-2" />
-            <h3 className="text-lg font-medium text-gray-900">Notifications</h3>
-          </div>
-        </div>
-        <div className="card-body space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Email Notifications</label>
-              <p className="text-sm text-gray-500">Receive notifications via email</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={settings.notifications.email}
-              onChange={(e) => handleInputChange('notifications', 'email', e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Push Notifications</label>
-              <p className="text-sm text-gray-500">Receive push notifications in browser</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={settings.notifications.push}
-              onChange={(e) => handleInputChange('notifications', 'push', e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium text-gray-700">SMS Notifications</label>
-              <p className="text-sm text-gray-500">Receive notifications via SMS</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={settings.notifications.sms}
-              onChange={(e) => handleInputChange('notifications', 'sms', e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Features */}
-      <div className="card">
-        <div className="card-header">
-          <div className="flex items-center">
-            <CogIcon className="h-5 w-5 text-gray-400 mr-2" />
-            <h3 className="text-lg font-medium text-gray-900">Features</h3>
-          </div>
-        </div>
-        <div className="card-body space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Analytics</label>
-              <p className="text-sm text-gray-500">Enable detailed analytics tracking</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={settings.features.analytics}
-              onChange={(e) => handleInputChange('features', 'analytics', e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Custom Fields</label>
-              <p className="text-sm text-gray-500">Enable custom product fields</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={settings.features.customFields}
-              onChange={(e) => handleInputChange('features', 'customFields', e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Inventory Tracking</label>
-              <p className="text-sm text-gray-500">Track product inventory levels</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={settings.features.inventoryTracking}
-              onChange={(e) => handleInputChange('features', 'inventoryTracking', e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-          </div>
-          
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Customer Insights</label>
-              <p className="text-sm text-gray-500">Enable customer behavior analytics</p>
-            </div>
-            <input
-              type="checkbox"
-              checked={settings.features.customerInsights}
-              onChange={(e) => handleInputChange('features', 'customerInsights', e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Security */}
+      {/* OAuth Authentication */}
       <div className="card">
         <div className="card-header">
           <div className="flex items-center">
             <ShieldCheckIcon className="h-5 w-5 text-gray-400 mr-2" />
-            <h3 className="text-lg font-medium text-gray-900">Security</h3>
+            <h3 className="text-lg font-medium text-gray-900">Authentication</h3>
           </div>
         </div>
         <div className="card-body space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <label className="text-sm font-medium text-gray-700">Two-Factor Authentication</label>
-              <p className="text-sm text-gray-500">Require 2FA for admin access</p>
+          {oauthStatus && oauthStatus.authenticated ? (
+            <div className="flex items-center text-green-600">
+              <CheckCircleIcon className="h-5 w-5 mr-2" />
+              <span>Connected to Ecwid Store ID: {oauthStatus.store?.storeId}</span>
             </div>
-            <input
-              type="checkbox"
-              checked={settings.security.twoFactor}
-              onChange={(e) => handleInputChange('security', 'twoFactor', e.target.checked)}
-              className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-            />
-          </div>
-          
-          <div>
-            <label className="form-label">Session Timeout (minutes)</label>
-            <input
-              type="number"
-              value={settings.security.sessionTimeout}
-              onChange={(e) => handleInputChange('security', 'sessionTimeout', parseInt(e.target.value))}
-              className="form-input"
-              min="5"
-              max="1440"
-            />
-          </div>
-          
-          <div>
-            <label className="form-label">IP Whitelist</label>
-            <textarea
-              value={settings.security.ipWhitelist.join('\n')}
-              onChange={(e) => handleInputChange('security', 'ipWhitelist', e.target.value.split('\n').filter(ip => ip.trim()))}
-              className="form-input"
-              rows="3"
-              placeholder="Enter IP addresses, one per line"
-            />
-            <p className="text-sm text-gray-500 mt-1">
-              Leave empty to allow all IPs
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* API Keys */}
-      <div className="card">
-        <div className="card-header">
-          <div className="flex items-center">
-            <KeyIcon className="h-5 w-5 text-gray-400 mr-2" />
-            <h3 className="text-lg font-medium text-gray-900">API Keys</h3>
-          </div>
-        </div>
-        <div className="card-body">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-md p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-yellow-800">
-                  API Key Security
-                </h3>
-                <div className="mt-2 text-sm text-yellow-700">
-                  <p>
-                    Keep your API keys secure and never share them publicly. 
-                    These keys provide access to your Ecwid store data.
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="btn btn-primary"
-        >
-          {saving ? (
-            <>
-              <div className="spinner w-4 h-4 mr-2"></div>
-              Saving...
-            </>
           ) : (
-            'Save Settings'
+            <div className="space-y-2">
+              <p className="text-gray-600">
+                Your store is not yet connected to Ecwid via OAuth. Please connect to enable full plugin functionality.
+              </p>
+              <OAuthButton 
+                storeId={storeId}
+                onSuccess={(store) => {
+                  setOauthStatus({ success: true, authenticated: true, store });
+                  setMessage('Successfully connected to Ecwid!');
+                }}
+                onError={(error) => {
+                  setMessage(`Failed to connect: ${error}`);
+                }}
+              />
+            </div>
           )}
-        </button>
+        </div>
       </div>
     </div>
   );

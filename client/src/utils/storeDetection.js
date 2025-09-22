@@ -1,175 +1,167 @@
 /**
  * Store Detection Utilities
- * Automatically detects Ecwid store ID and other parameters from various sources
+ * Automatically detects store ID and other parameters from various sources
  */
 
 export const detectStoreId = () => {
   let storeId = null;
   
+  console.log('🔍 Detecting store ID...');
+  console.log('Current URL:', window.location.href);
+  
   // Method 1: From script tag data attribute
   const script = document.querySelector('script[data-ecwid-store-id]');
   if (script) {
     storeId = script.getAttribute('data-ecwid-store-id');
+    console.log('Method 1 - Script tag storeId:', storeId);
     if (storeId && storeId !== 'YOUR_STORE_ID') {
+      console.log('✅ Store ID found via script tag:', storeId);
       return storeId;
     }
   }
   
-  // Method 2: From Ecwid global object
-  if (window.Ecwid && window.Ecwid.storeId) {
-    storeId = window.Ecwid.storeId;
-    if (storeId) return storeId;
-  }
-  
-  // Method 3: From URL parameters
+  // Method 2: From URL parameters
   const urlParams = new URLSearchParams(window.location.search);
   storeId = urlParams.get('storeId') || urlParams.get('ecwid_store_id') || urlParams.get('store_id');
-  if (storeId) return storeId;
+  console.log('Method 2 - URL params storeId:', storeId);
+  if (storeId) {
+    console.log('✅ Store ID found via URL params:', storeId);
+    return storeId;
+  }
   
-  // Method 4: From localStorage (for development/persistence)
+  // Method 3: From URL hash (for app URLs)
+  const hash = window.location.hash;
+  console.log('Method 3 - URL hash:', hash);
+  if (hash) {
+    // Try to extract store ID from hash like #app:name=1faq-dev
+    const hashParams = new URLSearchParams(hash.substring(1));
+    storeId = hashParams.get('storeId') || hashParams.get('ecwid_store_id') || hashParams.get('store_id');
+    if (storeId) {
+      console.log('✅ Store ID found via hash params:', storeId);
+      return storeId;
+    }
+  }
+  
+  // Method 4: Extract from referrer URL (when loaded from external source)
+  if (document.referrer) {
+    console.log('Method 4 - Referrer URL:', document.referrer);
+    try {
+      const referrerUrl = new URL(document.referrer);
+      const referrerParams = new URLSearchParams(referrerUrl.search);
+      storeId = referrerParams.get('storeId') || referrerParams.get('ecwid_store_id') || referrerParams.get('store_id');
+      if (storeId) {
+        console.log('✅ Store ID found via referrer params:', storeId);
+        return storeId;
+      }
+    } catch (e) {
+      console.log('Could not parse referrer URL');
+    }
+  }
+  
+  // Method 5: From localStorage
   storeId = localStorage.getItem('ecwid_store_id');
-  if (storeId) return storeId;
+  console.log('Method 5 - localStorage storeId:', storeId);
+  if (storeId) {
+    console.log('✅ Store ID found in localStorage:', storeId);
+    return storeId;
+  }
   
-  // Method 5: From referrer or parent window (for embedded scenarios)
-  if (window.parent !== window) {
+  // Method 6: From parent window (if in iframe)
+  if (window.parent && window.parent !== window) {
+    console.log('Method 6 - Checking parent window...');
     try {
-      const parentUrl = new URL(document.referrer);
-      const parentParams = new URLSearchParams(parentUrl.search);
+      const parentUrl = window.parent.location.href;
+      const parentParams = new URLSearchParams(parentUrl.split('?')[1] || '');
       storeId = parentParams.get('storeId') || parentParams.get('ecwid_store_id') || parentParams.get('store_id');
-      if (storeId) return storeId;
+      if (storeId) {
+        console.log('✅ Store ID found via parent window:', storeId);
+        return storeId;
+      }
     } catch (e) {
-      console.log('Could not parse parent URL');
+      console.log('Could not access parent window (cross-origin)');
     }
   }
   
-  // Method 6: From iframe src (for embedded scenarios)
-  if (window.parent !== window) {
+  // Method 7: From iframe src parameter
+  if (window.location !== window.parent.location) {
+    console.log('Method 7 - Checking iframe src...');
     try {
-      const iframeSrc = window.location.href;
-      const iframeUrl = new URL(iframeSrc);
-      const iframeParams = new URLSearchParams(iframeUrl.search);
+      const iframeParams = new URLSearchParams(window.location.search);
       storeId = iframeParams.get('storeId') || iframeParams.get('ecwid_store_id') || iframeParams.get('store_id');
-      if (storeId) return storeId;
+      if (storeId) {
+        console.log('✅ Store ID found via iframe src:', storeId);
+        return storeId;
+      }
     } catch (e) {
-      console.log('Could not parse iframe URL');
+      console.log('Could not parse iframe src');
     }
   }
   
-  // Method 7: From postMessage (for embedded scenarios)
-  if (window.parent !== window) {
-    // Listen for postMessage from parent
-    const handleMessage = (event) => {
-      if (event.data && event.data.type === 'ECWID_STORE_ID') {
+  // Method 8: PostMessage communication with parent
+  if (window.parent && window.parent !== window) {
+    console.log('Method 8 - Using postMessage...');
+    
+    // Listen for store ID from parent
+    const messageHandler = (event) => {
+      if (event.data && event.data.type === 'STORE_ID') {
         storeId = event.data.storeId;
-        if (storeId) {
-          window.removeEventListener('message', handleMessage);
-          return storeId;
-        }
+        console.log('✅ Store ID received via postMessage:', storeId);
+        window.removeEventListener('message', messageHandler);
+        return storeId;
       }
     };
     
-    window.addEventListener('message', handleMessage);
+    window.addEventListener('message', messageHandler);
     
     // Request store ID from parent
-    window.parent.postMessage({ type: 'REQUEST_ECWID_STORE_ID' }, '*');
+    window.parent.postMessage({ type: 'REQUEST_STORE_ID' }, '*');
+    
+    // Clean up listener after timeout
+    setTimeout(() => {
+      window.removeEventListener('message', messageHandler);
+    }, 1000);
   }
   
-  return storeId;
+  console.log('❌ No store ID found');
+  return null;
 };
 
-export const detectStoreParameters = () => {
-  const storeId = detectStoreId();
+/**
+ * Auto-configure store with detected parameters
+ */
+export const autoConfigureStore = (storeConfig) => {
+  console.log('🔧 Auto-configuring store with:', storeConfig);
   
-  if (!storeId) {
-    return null;
-  }
+  // Store configuration in localStorage
+  localStorage.setItem('ecwid_store_config', JSON.stringify(storeConfig));
+  localStorage.setItem('ecwid_store_id', storeConfig.storeId);
+  localStorage.setItem('ecwid_store_configured', 'true');
   
-  const parameters = {
-    storeId,
-    detectedAt: new Date().toISOString(),
-    source: 'auto-detection'
-  };
-  
-  // Try to get additional parameters from URL
-  const urlParams = new URLSearchParams(window.location.search);
-  const additionalParams = {};
-  
-  // Common Ecwid parameters
-  const paramKeys = [
-    'clientId',
-    'client_id',
-    'accessToken',
-    'access_token',
-    'refreshToken',
-    'refresh_token',
-    'webhookSecret',
-    'webhook_secret',
-    'currency',
-    'timezone',
-    'language',
-    'theme'
-  ];
-  
-  paramKeys.forEach(key => {
-    const value = urlParams.get(key);
-    if (value) {
-      additionalParams[key] = value;
+  console.log('✅ Store auto-configured successfully');
+  return true;
+};
+
+/**
+ * Get stored store configuration
+ */
+export const getStoredStoreConfig = () => {
+  const config = localStorage.getItem('ecwid_store_config');
+  if (config) {
+    try {
+      return JSON.parse(config);
+    } catch (e) {
+      console.error('Error parsing stored store config:', e);
     }
-  });
-  
-  return {
-    ...parameters,
-    ...additionalParams
-  };
+  }
+  return null;
 };
 
-export const saveStoreConfiguration = (storeConfig) => {
-  try {
-    localStorage.setItem('ecwid_store_config', JSON.stringify(storeConfig));
-    localStorage.setItem('ecwid_store_id', storeConfig.storeId);
-    localStorage.setItem('ecwid_store_configured', 'true');
-    return true;
-  } catch (error) {
-    console.error('Error saving store configuration:', error);
-    return false;
-  }
-};
-
-export const loadStoreConfiguration = () => {
-  try {
-    const config = localStorage.getItem('ecwid_store_config');
-    return config ? JSON.parse(config) : null;
-  } catch (error) {
-    console.error('Error loading store configuration:', error);
-    return null;
-  }
-};
-
-export const clearStoreConfiguration = () => {
-  try {
-    localStorage.removeItem('ecwid_store_config');
-    localStorage.removeItem('ecwid_store_id');
-    localStorage.removeItem('ecwid_store_configured');
-    return true;
-  } catch (error) {
-    console.error('Error clearing store configuration:', error);
-    return false;
-  }
-};
-
-// Auto-detect and configure store on page load
-export const autoConfigureStore = async () => {
-  const storeParams = detectStoreParameters();
-  
-  if (!storeParams || !storeParams.storeId) {
-    console.warn('Could not auto-detect store parameters');
-    return null;
-  }
-  
-  console.log('Auto-detected store parameters:', storeParams);
-  
-  // Save configuration
-  saveStoreConfiguration(storeParams);
-  
-  return storeParams;
+/**
+ * Clear stored store configuration
+ */
+export const clearStoredStoreConfig = () => {
+  localStorage.removeItem('ecwid_store_config');
+  localStorage.removeItem('ecwid_store_id');
+  localStorage.removeItem('ecwid_store_configured');
+  console.log('🗑️ Stored store configuration cleared');
 };

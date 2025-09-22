@@ -10,7 +10,13 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    port: 5173,
+    port: 3000,
+    host: true,
+    allowedHosts: [
+      'vigorously-loving-pug.ngrok-free.app',
+      'localhost',
+      '127.0.0.1'
+    ],
     proxy: {
       '/api': {
         target: 'http://localhost:3001',

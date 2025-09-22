@@ -1,0 +1,5 @@
+---
+description:never commit to github unless explicitly asked
+globs:
+alwaysApply: true
+---

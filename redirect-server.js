@@ -11,10 +11,15 @@ const morgan = require('morgan');
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 10000;
 
-// Get ngrok URL from environment
+// Strict configuration validation - NO DEFAULTS
+const PORT = process.env.PORT;
 const NGROK_URL = process.env.NGROK_URL;
+
+if (!PORT) {
+  console.error('❌ PORT environment variable is required');
+  process.exit(1);
+}
 
 if (!NGROK_URL) {
   console.error('❌ NGROK_URL environment variable is required');
@@ -37,7 +42,7 @@ app.all('*', (req, res) => {
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Redirect Server running on port ${PORT}`);
-  console.log(`📊 Environment: ${process.env.NODE_ENV || 'production'}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV}`);
   console.log(`🔄 All requests will be forwarded to: ${NGROK_URL}`);
 });
 

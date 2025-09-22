@@ -10,6 +10,8 @@ services:
         value: production
       - key: PORT
         value: 10000
+      - key: APP_VERSION
+        value: 1.0.0
       - key: NGROK_URL
         value: https://vigorously-loving-pug.ngrok-free.app
       - key: RENDER_URL
@@ -17,17 +19,15 @@ services:
       - key: ALLOWED_ORIGINS
         value: http://localhost:3000,http://localhost:5173,https://vigorously-loving-pug.ngrok-free.app,https://recom-mqxd.onrender.com
       - key: RATE_LIMIT_WINDOW_MS
-        value: 900000
+        value: 1000
       - key: RATE_LIMIT_MAX_REQUESTS
-        value: 100
+        value: 10
       - key: LOG_LEVEL
         value: combined
       - key: CUSTOM_JS_URL
         value: https://ec.1nax.app/ec.js
       - key: CUSTOM_CSS_URL
         value: https://ec.1nax.app/ec.css
-      - key: WEBHOOK_URL
-        value: https://ec.1nax.app/webhooks
     healthCheckPath: /api/health
     autoDeploy: true
     branch: main

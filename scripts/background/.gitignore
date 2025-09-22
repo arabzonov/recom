@@ -1,0 +1,18 @@
+# Background scripts are sensitive and should not be publicly accessible
+# This directory contains server-side sync scripts that should only run on the server
+
+# Log files
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Environment-specific files
+.env.local
+.env.production
+
+# Backup files
+*.bak
+*.backup
+

@@ -1,0 +1,5 @@
+---
+description:never overwrite .env file, just suggest changes 
+globs:
+alwaysApply: true
+---
