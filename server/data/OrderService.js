@@ -25,7 +25,7 @@ class OrderService extends BaseDataAccess {
    * @returns {Promise<Array>} Array of orders
    */
   async findByStoreId(storeId, options = {}) {
-    const { limit, offset, orderBy = 'created_at DESC' } = options;
+    const { limit, offset, orderBy = 'id DESC' } = options;
     let sql = 'SELECT * FROM orders WHERE store_id = ?';
     const params = [storeId];
 
@@ -54,12 +54,10 @@ class OrderService extends BaseDataAccess {
       storeId,
       ecwidOrderId,
       orderNumber,
-      total,
-      subtotal,
-      taxAmount,
-      status,
-      orderData: fullOrderData
+      productIds
     } = orderData;
+
+    const productIdsJson = JSON.stringify(productIds || []);
 
     // Check if order already exists
     const existingOrder = await this.findByStoreAndEcwidId(storeId, ecwidOrderId);
@@ -68,16 +66,11 @@ class OrderService extends BaseDataAccess {
       // Update existing order
       await this.execute(`
         UPDATE orders 
-        SET order_number = ?, total = ?, subtotal = ?, tax_amount = ?, 
-            status = ?, order_data = ?, updated_at = CURRENT_TIMESTAMP
+        SET order_number = ?, product_ids = ?
         WHERE store_id = ? AND ecwid_order_id = ?
       `, [
         orderNumber,
-        total,
-        subtotal,
-        taxAmount,
-        status,
-        JSON.stringify(fullOrderData),
+        productIdsJson,
         storeId,
         ecwidOrderId
       ]);
@@ -86,18 +79,13 @@ class OrderService extends BaseDataAccess {
     } else {
       // Create new order
       await this.execute(`
-        INSERT INTO orders 
-        (store_id, ecwid_order_id, order_number, total, subtotal, tax_amount, status, order_data)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO orders (store_id, ecwid_order_id, order_number, product_ids)
+        VALUES (?, ?, ?, ?)
       `, [
         storeId,
         ecwidOrderId,
         orderNumber,
-        total,
-        subtotal,
-        taxAmount,
-        status,
-        JSON.stringify(fullOrderData)
+        productIdsJson
       ]);
 
       return await this.findByStoreAndEcwidId(storeId, ecwidOrderId);
@@ -106,40 +94,27 @@ class OrderService extends BaseDataAccess {
 
   /**
    * Bulk create or update orders
-   * @param {string} storeId - Store ID
-   * @param {Array} orders - Array of order data
-   * @returns {Promise<Object>} Result summary
+   * @param {Array} orders - Array of order data objects
+   * @returns {Promise<Object>} Summary of operation
    */
-  async bulkCreateOrUpdate(storeId, orders) {
+  async bulkCreateOrUpdate(orders) {
     let created = 0;
     let updated = 0;
     let errors = 0;
 
-    for (const order of orders) {
+    for (const orderData of orders) {
       try {
-        const existing = await this.findByStoreAndEcwidId(storeId, order.id);
+        const existing = await this.findByStoreAndEcwidId(orderData.storeId, orderData.ecwidOrderId);
         
         if (existing) {
           updated++;
         } else {
           created++;
         }
-
-        await this.createOrUpdate({
-          storeId,
-          ecwidOrderId: order.id,
-          orderNumber: order.orderNumber,
-          total: order.total,
-          subtotal: order.subtotal,
-          taxAmount: order.taxAmount,
-          status: order.fulfillmentStatus || 'pending',
-          orderData: order
-        });
+        
+        await this.createOrUpdate(orderData);
       } catch (error) {
-        console.error(`Error processing order ${order.id}:`, error.message);
-        if (error.code === 'SQLITE_CONSTRAINT') {
-          console.error(`  Foreign key constraint failed - store ${storeId} may not exist`);
-        }
+        console.error(`Error processing order ${orderData.ecwidOrderId}:`, error.message);
         errors++;
       }
     }
@@ -148,19 +123,20 @@ class OrderService extends BaseDataAccess {
   }
 
   /**
-   * Delete orders for a store
+   * Delete all orders for a store
    * @param {string} storeId - Store ID
-   * @returns {Promise<Object>} Delete result
+   * @returns {Promise<number>} Number of deleted orders
    */
   async deleteByStoreId(storeId) {
-    return await this.execute('DELETE FROM orders WHERE store_id = ?', [storeId]);
+    const result = await this.execute('DELETE FROM orders WHERE store_id = ?', [storeId]);
+    return result.changes;
   }
 
   /**
-   * Bulk insert orders (for fresh sync - no updates, only inserts)
+   * Bulk insert orders (used by sync script)
    * @param {string} storeId - Store ID
-   * @param {Array} orders - Array of order data
-   * @returns {Promise<Object>} Insert result
+   * @param {Array} orders - Array of order data objects
+   * @returns {Promise<Object>} Summary of operation
    */
   async bulkInsert(storeId, orders) {
     let created = 0;
@@ -168,71 +144,22 @@ class OrderService extends BaseDataAccess {
 
     for (const order of orders) {
       try {
-        await this.execute(`
-          INSERT INTO orders 
-          (store_id, ecwid_order_id, order_number, total, subtotal, tax_amount, status, order_data)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
+        const orderData = {
           storeId,
-          order.id,
-          order.orderNumber,
-          order.total,
-          order.subtotal,
-          order.taxAmount,
-          order.fulfillmentStatus || 'pending',
-          JSON.stringify(order)
-        ]);
+          ecwidOrderId: order.id.toString(),
+          orderNumber: order.orderNumber || order.number || '',
+          productIds: order.items ? order.items.map(item => item.productId?.toString()).filter(Boolean) : []
+        };
+        
+        await this.createOrUpdate(orderData);
         created++;
       } catch (error) {
-        console.error(`Error inserting order ${order.id}:`, error.message);
-        if (error.code === 'SQLITE_CONSTRAINT') {
-          console.error(`  Foreign key constraint failed - store ${storeId} may not exist`);
-        }
+        console.error(`Error processing order ${order.id}:`, error.message);
         errors++;
       }
     }
 
     return { created, errors, total: orders.length };
-  }
-
-  /**
-   * Get order count for a store
-   * @param {string} storeId - Store ID
-   * @returns {Promise<number>} Order count
-   */
-  async countByStoreId(storeId) {
-    const result = await this.get(
-      'SELECT COUNT(*) as total FROM orders WHERE store_id = ?',
-      [storeId]
-    );
-    return result ? result.total : 0;
-  }
-
-  /**
-   * Get orders by status
-   * @param {string} storeId - Store ID
-   * @param {string} status - Order status
-   * @param {Object} options - Query options
-   * @returns {Promise<Array>} Array of orders
-   */
-  async findByStatus(storeId, status, options = {}) {
-    const { limit, offset, orderBy = 'created_at DESC' } = options;
-    let sql = 'SELECT * FROM orders WHERE store_id = ? AND status = ?';
-    const params = [storeId, status];
-
-    if (orderBy) {
-      sql += ` ORDER BY ${orderBy}`;
-    }
-    if (limit) {
-      sql += ` LIMIT ?`;
-      params.push(limit);
-    }
-    if (offset) {
-      sql += ` OFFSET ?`;
-      params.push(offset);
-    }
-
-    return await this.query(sql, params);
   }
 }
 

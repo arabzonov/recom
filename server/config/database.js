@@ -75,14 +75,11 @@ const initializeDatabase = async () => {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           store_id TEXT NOT NULL,
           ecwid_product_id TEXT NOT NULL,
-          name TEXT NOT NULL,
           price REAL,
-          sku TEXT,
           stock INTEGER DEFAULT 0,
-          image_url TEXT,
-          category_id TEXT,
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          category_ids TEXT DEFAULT '[]',
+          cross_sells TEXT DEFAULT '[]',
+          upsells TEXT DEFAULT '[]',
           FOREIGN KEY (store_id) REFERENCES stores (store_id),
           UNIQUE(store_id, ecwid_product_id)
         )
@@ -95,23 +92,65 @@ const initializeDatabase = async () => {
           store_id TEXT NOT NULL,
           ecwid_order_id TEXT NOT NULL,
           order_number TEXT,
-          total REAL,
-          subtotal REAL,
-          tax_amount REAL,
-          status TEXT DEFAULT 'pending',
-          order_data TEXT DEFAULT '{}',
-          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          product_ids TEXT DEFAULT '[]',
           FOREIGN KEY (store_id) REFERENCES stores (store_id),
           UNIQUE(store_id, ecwid_order_id)
         )
       `);
+
+      // Create categories table for category-based recommendations
+      db.run(`
+        CREATE TABLE IF NOT EXISTS categories (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          store_id TEXT NOT NULL,
+          category_id TEXT NOT NULL,
+          recommended_products TEXT DEFAULT '[]',
+          FOREIGN KEY (store_id) REFERENCES stores (store_id),
+          UNIQUE(store_id, category_id)
+        )
+      `);
+
+      // Add cross_sells column to existing products table if it doesn't exist
+      db.run(`ALTER TABLE products ADD COLUMN cross_sells TEXT DEFAULT '[]'`, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+          console.error('Error adding cross_sells column:', err.message);
+        }
+      });
+
+      // Add upsells column to existing products table if it doesn't exist
+      db.run(`ALTER TABLE products ADD COLUMN upsells TEXT DEFAULT '[]'`, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+          console.error('Error adding upsells column:', err.message);
+        }
+      });
+
+      // Migrate data from old column names to new ones (if old columns exist)
+      db.run(`UPDATE products SET cross_sells = cross_sell_recommendations WHERE cross_sell_recommendations IS NOT NULL AND cross_sells = '[]'`, (err) => {
+        if (err) {
+          console.log('No cross_sell_recommendations column to migrate (this is normal for new databases)');
+        }
+      });
+
+      db.run(`UPDATE products SET upsells = upsell_recommendations WHERE upsell_recommendations IS NOT NULL AND upsells = '[]'`, (err) => {
+        if (err) {
+          console.log('No upsell_recommendations column to migrate (this is normal for new databases)');
+        }
+      });
+
+      // Add category_ids column to existing products table if it doesn't exist
+      db.run(`ALTER TABLE products ADD COLUMN category_ids TEXT DEFAULT '[]'`, (err) => {
+        if (err && !err.message.includes('duplicate column name')) {
+          console.error('Error adding category_ids column:', err.message);
+        }
+      });
 
       // Create indexes for better performance
       db.run('CREATE INDEX IF NOT EXISTS idx_oauth_states_state ON oauth_states(state)');
       db.run('CREATE INDEX IF NOT EXISTS idx_oauth_states_store_id ON oauth_states(store_id)');
       db.run('CREATE INDEX IF NOT EXISTS idx_products_store_id ON products(store_id)');
       db.run('CREATE INDEX IF NOT EXISTS idx_products_ecwid_id ON products(ecwid_product_id)');
+      db.run('CREATE INDEX IF NOT EXISTS idx_products_category_ids ON products(category_ids)');
+      db.run('CREATE INDEX IF NOT EXISTS idx_products_price ON products(price)');
       db.run('CREATE INDEX IF NOT EXISTS idx_orders_store_id ON orders(store_id)');
       db.run('CREATE INDEX IF NOT EXISTS idx_orders_ecwid_id ON orders(ecwid_order_id)');
 

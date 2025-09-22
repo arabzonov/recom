@@ -101,6 +101,20 @@ class StoreService extends BaseDataAccess {
   }
 
   /**
+   * Update store settings
+   * @param {string} storeId - Store ID
+   * @param {Object} settings - Settings object
+   * @returns {Promise<Object>} Update result
+   */
+  async updateSettings(storeId, settings) {
+    return await this.execute(`
+      UPDATE stores 
+      SET settings = ?
+      WHERE store_id = ?
+    `, [JSON.stringify(settings), storeId]);
+  }
+
+  /**
    * Check if store is authenticated
    * @param {string} storeId - Store ID
    * @returns {Promise<boolean>} Authentication status

@@ -1,8 +1,10 @@
 const BaseDataAccess = require('./BaseDataAccess');
+const RecommendationService = require('./RecommendationService');
 
 class ProductService extends BaseDataAccess {
   constructor() {
     super('products');
+    this.recommendationService = new RecommendationService();
   }
 
   /**
@@ -25,7 +27,7 @@ class ProductService extends BaseDataAccess {
    * @returns {Promise<Array>} Array of products
    */
   async findByStoreId(storeId, options = {}) {
-    const { limit, offset, orderBy = 'created_at DESC' } = options;
+    const { limit, offset, orderBy = 'id DESC' } = options;
     let sql = 'SELECT * FROM products WHERE store_id = ?';
     const params = [storeId];
 
@@ -47,19 +49,19 @@ class ProductService extends BaseDataAccess {
   /**
    * Create or update product
    * @param {Object} productData - Product data
+   * @param {boolean} generateRecommendations - Whether to generate recommendations (default: false)
    * @returns {Promise<Object>} Product record
    */
-  async createOrUpdate(productData) {
+  async createOrUpdate(productData, generateRecommendations = false) {
     const {
       storeId,
       ecwidProductId,
-      name,
       price,
-      sku,
       stock,
-      imageUrl,
-      categoryId
+      categoryIds
     } = productData;
+
+    const categoryIdsJson = JSON.stringify(categoryIds || []);
 
     // Check if product already exists
     const existingProduct = await this.findByStoreAndEcwidId(storeId, ecwidProductId);
@@ -68,78 +70,72 @@ class ProductService extends BaseDataAccess {
       // Update existing product
       await this.execute(`
         UPDATE products 
-        SET name = ?, price = ?, sku = ?, stock = ?, 
-            image_url = ?, category_id = ?, updated_at = CURRENT_TIMESTAMP
+        SET price = ?, stock = ?, category_ids = ?
         WHERE store_id = ? AND ecwid_product_id = ?
       `, [
-        name,
         price,
-        sku,
         stock,
-        imageUrl,
-        categoryId,
+        categoryIdsJson,
         storeId,
         ecwidProductId
       ]);
 
-      return await this.findByStoreAndEcwidId(storeId, ecwidProductId);
+      const updatedProduct = await this.findByStoreAndEcwidId(storeId, ecwidProductId);
+      
+      // Generate recommendations if requested
+      if (generateRecommendations) {
+        await this.recommendationService.generateUpsellRecommendations(storeId, ecwidProductId);
+      }
+      
+      return updatedProduct;
     } else {
       // Create new product
       await this.execute(`
-        INSERT INTO products 
-        (store_id, ecwid_product_id, name, price, sku, stock, image_url, category_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO products (store_id, ecwid_product_id, price, stock, category_ids)
+        VALUES (?, ?, ?, ?, ?)
       `, [
         storeId,
         ecwidProductId,
-        name,
         price,
-        sku,
         stock,
-        imageUrl,
-        categoryId
+        categoryIdsJson
       ]);
 
-      return await this.findByStoreAndEcwidId(storeId, ecwidProductId);
+      const newProduct = await this.findByStoreAndEcwidId(storeId, ecwidProductId);
+      
+      // Generate recommendations if requested
+      if (generateRecommendations) {
+        await this.recommendationService.generateUpsellRecommendations(storeId, ecwidProductId);
+      }
+      
+      return newProduct;
     }
   }
 
   /**
    * Bulk create or update products
-   * @param {string} storeId - Store ID
-   * @param {Array} products - Array of product data
-   * @returns {Promise<Object>} Result summary
+   * @param {Array} products - Array of product data objects
+   * @param {boolean} generateRecommendations - Whether to generate recommendations (default: false)
+   * @returns {Promise<Object>} Summary of operation
    */
-  async bulkCreateOrUpdate(storeId, products) {
+  async bulkCreateOrUpdate(products, generateRecommendations = false) {
     let created = 0;
     let updated = 0;
     let errors = 0;
 
-    for (const product of products) {
+    for (const productData of products) {
       try {
-        const existing = await this.findByStoreAndEcwidId(storeId, product.id);
+        const existing = await this.findByStoreAndEcwidId(productData.storeId, productData.ecwidProductId);
         
         if (existing) {
           updated++;
         } else {
           created++;
         }
-
-        await this.createOrUpdate({
-          storeId,
-          ecwidProductId: product.id,
-          name: product.name,
-          price: product.price,
-          sku: product.sku,
-          stock: product.stock,
-          imageUrl: product.imageUrl,
-          categoryId: product.categoryId
-        });
+        
+        await this.createOrUpdate(productData, generateRecommendations);
       } catch (error) {
-        console.error(`Error processing product ${product.id}:`, error.message);
-        if (error.code === 'SQLITE_CONSTRAINT') {
-          console.error(`  Foreign key constraint failed - store ${storeId} may not exist`);
-        }
+        console.error(`Error processing product ${productData.ecwidProductId}:`, error.message);
         errors++;
       }
     }
@@ -148,19 +144,29 @@ class ProductService extends BaseDataAccess {
   }
 
   /**
-   * Delete products for a store
+   * Get product recommendations
    * @param {string} storeId - Store ID
-   * @returns {Promise<Object>} Delete result
+   * @param {string} productId - Product ID
+   * @returns {Promise<Object>} Product recommendations
    */
-  async deleteByStoreId(storeId) {
-    return await this.execute('DELETE FROM products WHERE store_id = ?', [storeId]);
+  async getProductRecommendations(storeId, productId) {
+    return await this.recommendationService.getProductRecommendations(storeId, productId);
   }
 
   /**
-   * Bulk insert products (for fresh sync - no updates, only inserts)
+   * Generate recommendations for all products in a store
    * @param {string} storeId - Store ID
-   * @param {Array} products - Array of product data
-   * @returns {Promise<Object>} Insert result
+   * @returns {Promise<Object>} Summary of recommendation generation
+   */
+  async generateAllRecommendations(storeId) {
+    return await this.recommendationService.generateAllRecommendations(storeId);
+  }
+
+  /**
+   * Bulk insert products (used by sync script)
+   * @param {string} storeId - Store ID
+   * @param {Array} products - Array of product data objects
+   * @returns {Promise<Object>} Summary of operation
    */
   async bulkInsert(storeId, products) {
     let created = 0;
@@ -168,26 +174,18 @@ class ProductService extends BaseDataAccess {
 
     for (const product of products) {
       try {
-        await this.execute(`
-          INSERT INTO products 
-          (store_id, ecwid_product_id, name, price, sku, stock, image_url, category_id)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        `, [
+        const productData = {
           storeId,
-          product.id,
-          product.name,
-          product.price,
-          product.sku,
-          product.stock,
-          product.imageUrl,
-          product.categoryId
-        ]);
+          ecwidProductId: product.id.toString(),
+          price: product.price,
+          stock: product.stock,
+          categoryIds: JSON.parse(product.categoryId || '[]')
+        };
+        
+        await this.createOrUpdate(productData, false);
         created++;
       } catch (error) {
-        console.error(`Error inserting product ${product.id}:`, error.message);
-        if (error.code === 'SQLITE_CONSTRAINT') {
-          console.error(`  Foreign key constraint failed - store ${storeId} may not exist`);
-        }
+        console.error(`Error processing product ${product.id}:`, error.message);
         errors++;
       }
     }
@@ -196,16 +194,13 @@ class ProductService extends BaseDataAccess {
   }
 
   /**
-   * Get product count for a store
+   * Delete all products for a store
    * @param {string} storeId - Store ID
-   * @returns {Promise<number>} Product count
+   * @returns {Promise<number>} Number of deleted products
    */
-  async countByStoreId(storeId) {
-    const result = await this.get(
-      'SELECT COUNT(*) as total FROM products WHERE store_id = ?',
-      [storeId]
-    );
-    return result ? result.total : 0;
+  async deleteByStoreId(storeId) {
+    const result = await this.execute('DELETE FROM products WHERE store_id = ?', [storeId]);
+    return result.changes;
   }
 }
 
