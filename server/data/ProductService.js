@@ -56,8 +56,7 @@ class ProductService extends BaseDataAccess {
       name,
       price,
       sku,
-      quantity,
-      enabled,
+      stock,
       imageUrl,
       categoryId
     } = productData;
@@ -69,15 +68,14 @@ class ProductService extends BaseDataAccess {
       // Update existing product
       await this.execute(`
         UPDATE products 
-        SET name = ?, price = ?, sku = ?, quantity = ?, enabled = ?, 
+        SET name = ?, price = ?, sku = ?, stock = ?, 
             image_url = ?, category_id = ?, updated_at = CURRENT_TIMESTAMP
         WHERE store_id = ? AND ecwid_product_id = ?
       `, [
         name,
         price,
         sku,
-        quantity,
-        enabled ? 1 : 0,
+        stock,
         imageUrl,
         categoryId,
         storeId,
@@ -89,16 +87,15 @@ class ProductService extends BaseDataAccess {
       // Create new product
       await this.execute(`
         INSERT INTO products 
-        (store_id, ecwid_product_id, name, price, sku, quantity, enabled, image_url, category_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        (store_id, ecwid_product_id, name, price, sku, stock, image_url, category_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         storeId,
         ecwidProductId,
         name,
         price,
         sku,
-        quantity,
-        enabled ? 1 : 0,
+        stock,
         imageUrl,
         categoryId
       ]);
@@ -134,8 +131,7 @@ class ProductService extends BaseDataAccess {
           name: product.name,
           price: product.price,
           sku: product.sku,
-          quantity: product.quantity,
-          enabled: product.enabled,
+          stock: product.stock,
           imageUrl: product.imageUrl,
           categoryId: product.categoryId
         });
@@ -158,6 +154,45 @@ class ProductService extends BaseDataAccess {
    */
   async deleteByStoreId(storeId) {
     return await this.execute('DELETE FROM products WHERE store_id = ?', [storeId]);
+  }
+
+  /**
+   * Bulk insert products (for fresh sync - no updates, only inserts)
+   * @param {string} storeId - Store ID
+   * @param {Array} products - Array of product data
+   * @returns {Promise<Object>} Insert result
+   */
+  async bulkInsert(storeId, products) {
+    let created = 0;
+    let errors = 0;
+
+    for (const product of products) {
+      try {
+        await this.execute(`
+          INSERT INTO products 
+          (store_id, ecwid_product_id, name, price, sku, stock, image_url, category_id)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          storeId,
+          product.id,
+          product.name,
+          product.price,
+          product.sku,
+          product.stock,
+          product.imageUrl,
+          product.categoryId
+        ]);
+        created++;
+      } catch (error) {
+        console.error(`Error inserting product ${product.id}:`, error.message);
+        if (error.code === 'SQLITE_CONSTRAINT') {
+          console.error(`  Foreign key constraint failed - store ${storeId} may not exist`);
+        }
+        errors++;
+      }
+    }
+
+    return { created, errors, total: products.length };
   }
 
   /**

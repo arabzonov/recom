@@ -125,7 +125,7 @@ async function fetchStoreOrders(store) {
 }
 
 /**
- * Store products in database
+ * Store products in database (DELETE + INSERT approach)
  */
 async function storeProducts(storeId, products) {
   try {
@@ -135,36 +135,89 @@ async function storeProducts(storeId, products) {
     const existingStore = await storeService.findByStoreId(storeId);
     if (!existingStore) {
       console.log(`⚠️  Store ${storeId} not found in database, skipping products sync`);
-      return { created: 0, updated: 0, errors: products.length, total: products.length };
+      return { created: 0, errors: products.length, total: products.length };
     }
     
-    // Process products to calculate minimum prices from variants
-    const processedProducts = products.map(product => {
-      // Get minimum price from variants if available
-      let minPrice = product.price;
-      if (product.variants && product.variants.length > 0) {
-        const prices = product.variants.map(v => v.price).filter(p => p > 0);
-        if (prices.length > 0) {
-          minPrice = Math.min(...prices);
-        }
-      }
-
-      return {
-        id: product.id,
-        name: product.name,
-        price: minPrice,
-        sku: product.sku,
-        quantity: product.quantity,
-        enabled: product.enabled,
-        imageUrl: product.imageUrl,
-        categoryId: product.categoryId
-      };
-    });
-
-    // Use bulk create/update method
-    const result = await productService.bulkCreateOrUpdate(storeId, processedProducts);
+    // DELETE: Remove all existing products for this store
+    console.log(`🗑️  Deleting existing products for store ${storeId}...`);
+    const deleteResult = await productService.deleteByStoreId(storeId);
+    console.log(`🗑️  Deleted existing products: ${deleteResult.changes} records removed`);
     
-    console.log(`✅ Successfully stored ${products.length} products (${result.created} created, ${result.updated} updated, ${result.errors} errors)`);
+    // Process products to calculate minimum prices from variants and filter enabled products with quantity > 0
+    
+    const processedProducts = products
+      .map(product => {
+        // Get minimum price from variants if available
+        let minPrice = product.price;
+        if (product.variants && product.variants.length > 0) {
+          const prices = product.variants.map(v => v.price).filter(p => p > 0);
+          if (prices.length > 0) {
+            minPrice = Math.min(...prices);
+          }
+        }
+
+        // Calculate total stock for the product
+        let totalStock = 0;
+        if (product.combinations && product.combinations.length > 0) {
+          // For products with variations, sum up quantities from all combinations
+          totalStock = product.combinations.reduce((sum, combination) => {
+            return sum + (combination.quantity || 0);
+          }, 0);
+        } else {
+          // For simple products without variations
+          if (product.quantity !== undefined) {
+            // Use actual quantity if available
+            totalStock = product.quantity;
+          } else if (product.inStock) {
+            // If quantity is undefined but inStock is true, treat as unlimited
+            totalStock = 999;
+          } else {
+            // If quantity is undefined and inStock is false, treat as 0
+            totalStock = 0;
+          }
+        }
+
+        return {
+          id: product.id,
+          name: product.name,
+          price: minPrice,
+          sku: product.sku,
+          stock: totalStock,
+          imageUrl: product.imageUrl,
+          categoryId: product.categoryId,
+          enabled: product.enabled
+        };
+      })
+      .filter(product => {
+        // Only include enabled products with stock > 0
+        return product.enabled && product.stock > 0;
+      });
+
+    const filteredCount = products.length - processedProducts.length;
+    if (filteredCount > 0) {
+      console.log(`🔍 Filtered out ${filteredCount} products (disabled or out of stock)`);
+    }
+
+    // INSERT: Insert all current products from API
+    const result = await productService.bulkInsert(storeId, processedProducts);
+    
+    console.log(`✅ Successfully stored ${processedProducts.length} products (${result.created} created, ${result.errors} errors)`);
+    
+    // Show stock summary
+    if (processedProducts.length > 0) {
+      const stockSummary = processedProducts.reduce((acc, product) => {
+        if (product.stock === 999) {
+          acc.unlimited++;
+        } else if (product.stock > 0) {
+          acc.limited++;
+        } else {
+          acc.zero++;
+        }
+        return acc;
+      }, { unlimited: 0, limited: 0, zero: 0 });
+      
+      console.log(`📊 Stock summary: ${stockSummary.unlimited} unlimited, ${stockSummary.limited} limited, ${stockSummary.zero} zero stock`);
+    }
     return result;
   } catch (error) {
     console.error('❌ Error storing products:', error.message);
@@ -173,7 +226,7 @@ async function storeProducts(storeId, products) {
 }
 
 /**
- * Store orders in database
+ * Store orders in database (DELETE + INSERT approach)
  */
 async function storeOrders(storeId, orders) {
   try {
@@ -183,13 +236,18 @@ async function storeOrders(storeId, orders) {
     const existingStore = await storeService.findByStoreId(storeId);
     if (!existingStore) {
       console.log(`⚠️  Store ${storeId} not found in database, skipping orders sync`);
-      return { created: 0, updated: 0, errors: orders.length, total: orders.length };
+      return { created: 0, errors: orders.length, total: orders.length };
     }
     
-    // Use bulk create/update method
-    const result = await orderService.bulkCreateOrUpdate(storeId, orders);
+    // DELETE: Remove all existing orders for this store
+    console.log(`🗑️  Deleting existing orders for store ${storeId}...`);
+    const deleteResult = await orderService.deleteByStoreId(storeId);
+    console.log(`🗑️  Deleted existing orders: ${deleteResult.changes} records removed`);
     
-    console.log(`✅ Successfully stored ${orders.length} orders (${result.created} created, ${result.updated} updated, ${result.errors} errors)`);
+    // INSERT: Insert all current orders from API
+    const result = await orderService.bulkInsert(storeId, orders);
+    
+    console.log(`✅ Successfully stored ${orders.length} orders (${result.created} created, ${result.errors} errors)`);
     return result;
   } catch (error) {
     console.error('❌ Error storing orders:', error.message);
@@ -204,8 +262,8 @@ async function syncAllStores() {
   try {
     console.log('🚀 Starting sync for all stores...');
     
-    // Initialize database
-    await initializeDatabase();
+    // Initialize database (only if needed - skip for sync operations)
+    // await initializeDatabase();
     
     // Get all authenticated stores
     const stores = await getAuthenticatedStores();

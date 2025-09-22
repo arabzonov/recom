@@ -15,9 +15,12 @@ node scripts/background/sync-all-stores.js
 **What it does:**
 - Fetches all authenticated stores from the database
 - For each store, retrieves products and orders from Ecwid API
-- Stores the data locally in products and orders tables for faster access
+- **DELETES all existing data** for the store first (ensures exact match with Ecwid)
+- **INSERTS fresh data** from the API (no updates, only new inserts)
 - Handles product variants to get minimum prices
-- Updates existing records or creates new ones as needed
+- **Filters products**: Only includes enabled products that are in stock
+- **Stock calculation**: Uses `inStock` status and combination quantities
+- Ensures local database exactly matches current Ecwid data
 
 
 ## Prerequisites

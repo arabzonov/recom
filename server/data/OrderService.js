@@ -157,6 +157,45 @@ class OrderService extends BaseDataAccess {
   }
 
   /**
+   * Bulk insert orders (for fresh sync - no updates, only inserts)
+   * @param {string} storeId - Store ID
+   * @param {Array} orders - Array of order data
+   * @returns {Promise<Object>} Insert result
+   */
+  async bulkInsert(storeId, orders) {
+    let created = 0;
+    let errors = 0;
+
+    for (const order of orders) {
+      try {
+        await this.execute(`
+          INSERT INTO orders 
+          (store_id, ecwid_order_id, order_number, total, subtotal, tax_amount, status, order_data)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `, [
+          storeId,
+          order.id,
+          order.orderNumber,
+          order.total,
+          order.subtotal,
+          order.taxAmount,
+          order.fulfillmentStatus || 'pending',
+          JSON.stringify(order)
+        ]);
+        created++;
+      } catch (error) {
+        console.error(`Error inserting order ${order.id}:`, error.message);
+        if (error.code === 'SQLITE_CONSTRAINT') {
+          console.error(`  Foreign key constraint failed - store ${storeId} may not exist`);
+        }
+        errors++;
+      }
+    }
+
+    return { created, errors, total: orders.length };
+  }
+
+  /**
    * Get order count for a store
    * @param {string} storeId - Store ID
    * @returns {Promise<number>} Order count
