@@ -5,7 +5,7 @@ const PORT = process.env.PORT || 3000;
 
 // Server-side redirect - no JavaScript needed
 app.get('*', (req, res) => {
-  const targetUrl = 'https://vigorously-loving-pug.ngrok-free.app/';
+  const targetUrl = process.env.NGROK_URL || 'https://vigorously-loving-pug.ngrok-free.app/';
   const searchParams = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
   const finalUrl = targetUrl + searchParams;
   
