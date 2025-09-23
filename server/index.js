@@ -56,7 +56,10 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve static files from the React app build
-app.use(express.static(path.join(__dirname, '../dist')));
+const distPath = path.join(__dirname, '../../dist');
+console.log('📁 Static files path:', distPath);
+console.log('📁 __dirname:', __dirname);
+app.use(express.static(distPath));
 
 // API Routes
 app.use('/api/ecwid', ecwidRoutes);
@@ -72,7 +75,9 @@ app.get('/api/health', (req, res) => {
 
 // Serve React app for all non-API routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
+  const indexPath = path.join(__dirname, '../../dist/index.html');
+  console.log('📄 Index file path:', indexPath);
+  res.sendFile(indexPath);
 });
 
 // Error handling middleware
