@@ -7,7 +7,7 @@
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
     "server:dev": "nodemon server/index.js",
     "client:dev": "vite",
-    "build": "npm run client:build && npm run db:migrate",
+    "build": "npm run client:build",
     "client:build": "vite build",
     "start": "node server/index.js",
     "start:redirect": "node redirect-server.js",
@@ -30,6 +30,8 @@
   "license": "MIT",
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "autoprefixer": "^10.4.16",
     "axios": "^1.6.0",
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
@@ -39,8 +41,13 @@
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
+    "postcss": "^8.4.32",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-router-dom": "^7.9.1",
-    "sqlite3": "^5.1.6"
+    "sqlite3": "^5.1.6",
+    "tailwindcss": "^3.3.6",
+    "vite": "^5.0.0"
   },
   "devDependencies": {
     "@types/react": "^18.2.37",
