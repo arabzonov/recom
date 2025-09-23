@@ -1,4 +1,4 @@
-const BaseDataAccess = require('./BaseDataAccess');
+import BaseDataAccess from './BaseDataAccess.js';
 
 /**
  * Category Service - Handles category-based recommendation logic
@@ -277,6 +277,16 @@ class CategoryService extends BaseDataAccess {
       return [];
     }
   }
+
+  /**
+   * Delete all categories for a specific store
+   * @param {string} storeId - Store ID
+   * @returns {Promise<number>} Number of deleted records
+   */
+  async deleteByStoreId(storeId) {
+    const result = await this.execute('DELETE FROM categories WHERE store_id = ?', [storeId]);
+    return result.changes;
+  }
 }
 
-module.exports = CategoryService;
+export default CategoryService;

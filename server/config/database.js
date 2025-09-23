@@ -1,6 +1,10 @@
-const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
-const fs = require('fs');
+import sqlite3 from 'sqlite3';
+import path from 'path';
+import fs from 'fs';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const DB_PATH = path.join(__dirname, '../../data/ecwid_plugin.db');
 
@@ -28,24 +32,11 @@ const createDatabaseConnection = () => {
   return db;
 };
 
-// Database initialization
-const initializeDatabase = async () => {
-  return new Promise((resolve, reject) => {
-    console.log('🗄️ Database initialization started...');
-    const db = createDatabaseConnection();
-    db.serialize(() => {
-      // Clean up unused tables first
-      console.log('🧹 Cleaning up unused database tables...');
-      db.run('DROP TABLE IF EXISTS customers');
-      db.run('DROP TABLE IF EXISTS analytics');
-      db.run('DROP TABLE IF EXISTS plugin_settings');
-      db.run('DROP TABLE IF EXISTS settings');
-      
-      // Drop existing tables to recreate with clean structure (but preserve stores and oauth states)
-      db.run('DROP TABLE IF EXISTS products');
-      db.run('DROP TABLE IF EXISTS orders');
-      
-      // Create stores table with only used columns (only if it doesn't exist)
+
+// Create database tables
+const createTables = (db, callback) => {
+  db.serialize(() => {
+    // Create stores table with only used columns (only if it doesn't exist)
       db.run(`
         CREATE TABLE IF NOT EXISTS stores (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -110,39 +101,6 @@ const initializeDatabase = async () => {
         )
       `);
 
-      // Add cross_sells column to existing products table if it doesn't exist
-      db.run(`ALTER TABLE products ADD COLUMN cross_sells TEXT DEFAULT '[]'`, (err) => {
-        if (err && !err.message.includes('duplicate column name')) {
-          console.error('Error adding cross_sells column:', err.message);
-        }
-      });
-
-      // Add upsells column to existing products table if it doesn't exist
-      db.run(`ALTER TABLE products ADD COLUMN upsells TEXT DEFAULT '[]'`, (err) => {
-        if (err && !err.message.includes('duplicate column name')) {
-          console.error('Error adding upsells column:', err.message);
-        }
-      });
-
-      // Migrate data from old column names to new ones (if old columns exist)
-      db.run(`UPDATE products SET cross_sells = cross_sell_recommendations WHERE cross_sell_recommendations IS NOT NULL AND cross_sells = '[]'`, (err) => {
-        if (err) {
-          console.log('No cross_sell_recommendations column to migrate (this is normal for new databases)');
-        }
-      });
-
-      db.run(`UPDATE products SET upsells = upsell_recommendations WHERE upsell_recommendations IS NOT NULL AND upsells = '[]'`, (err) => {
-        if (err) {
-          console.log('No upsell_recommendations column to migrate (this is normal for new databases)');
-        }
-      });
-
-      // Add category_ids column to existing products table if it doesn't exist
-      db.run(`ALTER TABLE products ADD COLUMN category_ids TEXT DEFAULT '[]'`, (err) => {
-        if (err && !err.message.includes('duplicate column name')) {
-          console.error('Error adding category_ids column:', err.message);
-        }
-      });
 
       // Create indexes for better performance
       db.run('CREATE INDEX IF NOT EXISTS idx_oauth_states_state ON oauth_states(state)');
@@ -154,11 +112,21 @@ const initializeDatabase = async () => {
       db.run('CREATE INDEX IF NOT EXISTS idx_orders_store_id ON orders(store_id)');
       db.run('CREATE INDEX IF NOT EXISTS idx_orders_ecwid_id ON orders(ecwid_order_id)');
 
-      console.log('✅ Database cleanup and tables created successfully');
-      console.log('📊 Final structure: stores, oauth_states, products, orders');
-      console.log('🗑️  Removed: customers, analytics, plugin_settings, settings');
-      console.log('💾 Preserved: existing stores and oauth states data');
-      resolve();
+    if (callback) callback();
+  });
+};
+
+// Database initialization (for server startup - no cleanup)
+const initializeDatabase = async () => {
+  return new Promise((resolve, reject) => {
+    console.log('🗄️ Database initialization started...');
+    const db = createDatabaseConnection();
+    db.serialize(() => {
+      // Only create tables if they don't exist (no cleanup)
+      createTables(db, () => {
+        console.log('✅ Database initialized successfully');
+        resolve();
+      });
     });
   });
 };
@@ -222,7 +190,7 @@ const closeDatabase = () => {
   });
 };
 
-module.exports = {
+export {
   createDatabaseConnection,
   initializeDatabase,
   dbQuery,

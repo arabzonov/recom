@@ -1,6 +1,7 @@
-const express = require('express');
-const axios = require('axios');
-const { StoreService, ProductService } = require('../data');
+import express from 'express';
+import axios from 'axios';
+import { StoreService, ProductService } from '../data/index.js';
+
 const router = express.Router();
 
 // Initialize services
@@ -614,5 +615,406 @@ router.post('/store/:storeId/recommendations/generate', getStoreCredentials, asy
   }
 });
 
+// Custom JavaScript endpoint for Ecwid storefront
+router.get('/ec.js', async (req, res) => {
+  try {
+    const { storeId } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).send('// Store ID is required');
+    }
+    
+    // Check if store exists and has product block enabled
+    const store = await storeService.findByStoreId(storeId);
+    if (!store || !store.access_token) {
+      return res.status(404).send('// Store not found or not authenticated');
+    }
+    
+    const settings = store.settings || {};
+    const productBlock = settings.productBlock;
+    
+    if (!productBlock || !productBlock.enabled) {
+      return res.status(404).send('// Product block not enabled');
+    }
+    
+    // Set content type to JavaScript
+    res.setHeader('Content-Type', 'application/javascript');
+    
+    // Return the custom JavaScript code
+    res.send(productBlock.script || '// No custom script available');
+    
+  } catch (error) {
+    console.error('Error serving custom JavaScript:', error);
+    res.status(500).send('// Error loading custom script');
+  }
+});
 
-module.exports = router;
+// Custom CSS endpoint for Ecwid storefront
+router.get('/ec.css', async (req, res) => {
+  try {
+    const { storeId } = req.query;
+    
+    if (!storeId) {
+      return res.status(400).send('/* Store ID is required */');
+    }
+    
+    // Check if store exists
+    const store = await storeService.findByStoreId(storeId);
+    if (!store) {
+      return res.status(404).send('/* Store not found */');
+    }
+    
+    const settings = store.settings || {};
+    const customCSS = settings.customCSS || '';
+    
+    // Set content type to CSS
+    res.setHeader('Content-Type', 'text/css');
+    
+    // Return custom CSS with default styling for recommendations
+    const defaultCSS = `
+/* 1recom Recommendation Widget Styles */
+#1recom {
+  margin: 20px 0;
+  padding: 20px;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+#1recom h3 {
+  color: #495057;
+  margin: 0 0 10px 0;
+  font-size: 18px;
+  font-weight: 600;
+  text-align: center;
+}
+
+#1recom p {
+  color: #6c757d;
+  margin: 0 0 20px 0;
+  font-size: 14px;
+  text-align: center;
+}
+
+#1recom .recommendations-grid {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+#1recom .recommendation-item {
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 15px;
+  min-width: 180px;
+  text-align: center;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  transition: transform 0.2s;
+}
+
+#1recom .recommendation-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+#1recom .recommendation-image {
+  background: #e9ecef;
+  height: 120px;
+  border-radius: 6px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6c757d;
+  font-size: 12px;
+  overflow: hidden;
+}
+
+#1recom .recommendation-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 6px;
+}
+
+#1recom .recommendation-name {
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #333;
+  font-size: 14px;
+  line-height: 1.3;
+}
+
+#1recom .recommendation-price {
+  color: #28a745;
+  font-weight: bold;
+  font-size: 16px;
+}
+
+#1recom .loading {
+  text-align: center;
+  padding: 20px;
+}
+
+#1recom .loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  #1recom .recommendations-grid {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  #1recom .recommendation-item {
+    width: 100%;
+    max-width: 300px;
+  }
+}
+`;
+    
+    res.send(defaultCSS + customCSS);
+    
+  } catch (error) {
+    console.error('Error serving custom CSS:', error);
+    res.status(500).send('/* Error loading custom styles */');
+  }
+});
+
+// Payload decryption endpoint for Ecwid apps
+router.post('/decrypt-payload', async (req, res) => {
+  try {
+    const { payload } = req.body;
+
+    if (!payload) {
+      return res.status(400).json({
+        success: false,
+        error: 'Payload is required'
+      });
+    }
+
+    console.log('🔓 Payload decryption requested:', payload.substring(0, 50) + '...');
+    console.log('🔓 Payload length:', payload.length);
+    
+    // Get the app's secret key from environment variables
+    const appSecret = process.env.ECWID_CLIENT_SECRET;
+    console.log('🔓 ECWID_CLIENT_SECRET exists:', !!appSecret);
+    console.log('🔓 ECWID_CLIENT_SECRET length:', appSecret ? appSecret.length : 0);
+    
+    if (!appSecret) {
+      console.error('❌ ECWID_CLIENT_SECRET not found in environment variables');
+      return res.status(500).json({
+        success: false,
+        error: 'App secret key not configured'
+      });
+    }
+
+    try {
+      // Decrypt the payload using AES-256-CBC
+      // The payload is base64 encoded, so decode it first
+      const encryptedData = Buffer.from(payload, 'base64');
+      
+      // Extract IV (first 16 bytes) and encrypted data
+      const iv = encryptedData.slice(0, 16);
+      const encrypted = encryptedData.slice(16);
+      
+      // Create decipher
+      const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(appSecret, 'hex'), iv);
+      
+      // Decrypt
+      let decrypted = decipher.update(encrypted, null, 'utf8');
+      decrypted += decipher.final('utf8');
+      
+      console.log('🔓 Decrypted payload:', decrypted);
+      
+      // Parse the decrypted JSON
+      const payloadData = JSON.parse(decrypted);
+      console.log('🔓 Parsed payload data:', payloadData);
+      
+      // Extract store ID and other parameters
+      const storeId = payloadData.storeId || payloadData.store_id;
+      const userId = payloadData.userId || payloadData.user_id;
+      const appId = payloadData.appId || payloadData.app_id;
+      
+      res.json({
+        success: true,
+        data: {
+          storeId,
+          userId,
+          appId,
+          rawData: payloadData
+        }
+      });
+
+    } catch (decryptError) {
+      console.error('❌ Error decrypting payload:', decryptError.message);
+      console.error('❌ Decrypt error details:', {
+        name: decryptError.name,
+        message: decryptError.message,
+        stack: decryptError.stack
+      });
+      
+      // If decryption fails, try to extract store ID from the payload using patterns
+      console.log('🔍 Attempting pattern extraction as fallback...');
+      
+      // Try to find store ID patterns in the raw payload
+      const patterns = [
+        /(\d{6,})/g,  // Look for 6+ digit numbers (typical store IDs)
+        /store[_-]?id[":\s=]+(\d+)/i,
+        /ecwid[_-]?store[_-]?id[":\s=]+(\d+)/i
+      ];
+      
+      let extractedStoreId = null;
+      for (let i = 0; i < patterns.length; i++) {
+        const matches = payload.match(patterns[i]);
+        if (matches) {
+          for (const match of matches) {
+            if (match.length >= 6 && /^\d+$/.test(match)) {
+              extractedStoreId = match;
+              break;
+            }
+          }
+          if (extractedStoreId) break;
+        }
+      }
+      
+      if (extractedStoreId) {
+        console.log('✅ Store ID extracted via pattern matching:', extractedStoreId);
+        res.json({
+          success: true,
+          data: {
+            storeId: extractedStoreId,
+            method: 'pattern_extraction'
+          }
+        });
+      } else {
+        res.status(400).json({
+          success: false,
+          error: 'Failed to decrypt payload and no store ID pattern found'
+        });
+      }
+    }
+
+  } catch (error) {
+    console.error('Error processing payload decryption:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process payload decryption',
+      details: error.message
+    });
+  }
+});
+
+// Webhook endpoint for Ecwid events
+router.post('/webhooks', async (req, res) => {
+  try {
+    const { storeId, eventType, data } = req.body;
+    
+    console.log('🔔 Webhook received:', { storeId, eventType, data });
+    
+    if (!storeId || !eventType) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing required parameters: storeId and eventType' 
+      });
+    }
+    
+    // Check if store exists
+    const store = await storeService.findByStoreId(storeId);
+    if (!store) {
+      console.log('❌ Webhook: Store not found:', storeId);
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Store not found' 
+      });
+    }
+    
+    // Process different webhook events
+    switch (eventType) {
+      case 'order.created':
+        console.log('📦 Order created webhook:', data);
+        // Handle new order - could trigger recommendation updates
+        if (data && data.orderId) {
+          // Store order data for recommendation analysis
+          await orderService.createOrUpdate({
+            storeId,
+            ecwidOrderId: data.orderId,
+            orderNumber: data.orderNumber,
+            productIds: data.items ? data.items.map(item => item.productId) : []
+          });
+        }
+        break;
+        
+      case 'product.updated':
+        console.log('🛍️ Product updated webhook:', data);
+        // Handle product updates - refresh recommendations
+        if (data && data.productId) {
+          // Update product data and regenerate recommendations
+          await productService.updateProduct(storeId, data.productId, data);
+          // Regenerate recommendations for this product
+          await productService.generateProductRecommendations(storeId, data.productId);
+        }
+        break;
+        
+      case 'product.created':
+        console.log('🆕 Product created webhook:', data);
+        // Handle new product - add to database and generate recommendations
+        if (data && data.productId) {
+          await productService.createOrUpdate({
+            storeId,
+            ecwidProductId: data.productId,
+            name: data.name,
+            price: data.price,
+            stock: data.stock,
+            categoryIds: data.categories || []
+          });
+          // Generate recommendations for the new product
+          await productService.generateProductRecommendations(storeId, data.productId);
+        }
+        break;
+        
+      case 'product.deleted':
+        console.log('🗑️ Product deleted webhook:', data);
+        // Handle product deletion - remove from database
+        if (data && data.productId) {
+          await productService.deleteProduct(storeId, data.productId);
+        }
+        break;
+        
+      default:
+        console.log('❓ Unknown webhook event type:', eventType);
+    }
+    
+    res.json({
+      success: true,
+      message: 'Webhook processed successfully',
+      eventType,
+      storeId
+    });
+    
+  } catch (error) {
+    console.error('Error processing webhook:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to process webhook',
+      details: error.message
+    });
+  }
+});
+
+export default router;

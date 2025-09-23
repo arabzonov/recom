@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { detectStoreId, autoConfigureStore } from '../utils/storeDetection';
+import { detectStoreId, detectStoreIdWithRetry, autoConfigureStore } from '../utils/storeDetection';
 
 const EcwidContext = createContext();
 
@@ -21,7 +21,7 @@ export const EcwidProvider = ({ children }) => {
   useEffect(() => {
     console.log('🔄 EcwidProvider useEffect triggered');
     
-    const initializeStore = () => {
+    const initializeStore = async () => {
       console.log('🔍 Initializing store detection...');
       console.log('🔍 Current localStorage state:', {
         ecwid_store_id: localStorage.getItem('ecwid_store_id'),
@@ -29,13 +29,20 @@ export const EcwidProvider = ({ children }) => {
         ecwid_store_config: localStorage.getItem('ecwid_store_config')
       });
       
-      // Try to detect store ID using utility function
+      // First try immediate detection
       console.log('🔍 Calling detectStoreId()...');
-      const detectedStoreId = detectStoreId();
+      let detectedStoreId = await detectStoreId();
       console.log('🔍 detectStoreId() returned:', detectedStoreId);
       
+      // If not found, try with retry mechanism to wait for Ecwid to load
+      if (!detectedStoreId) {
+        console.log('🔍 Store ID not found immediately, trying with retry mechanism...');
+        detectedStoreId = await detectStoreIdWithRetry(10, 500);
+        console.log('🔍 detectStoreIdWithRetry() returned:', detectedStoreId);
+      }
+      
       if (detectedStoreId) {
-        console.log('✅ Store ID detected via detectStoreId:', detectedStoreId);
+        console.log('✅ Store ID detected:', detectedStoreId);
         setStoreId(detectedStoreId);
         setIsLoaded(true);
         setError(null);

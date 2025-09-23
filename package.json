@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "A custom Ecwid plugin with Node.js + Express + React + SQLite",
   "main": "server/index.js",
+  "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
     "server:dev": "nodemon server/index.js",

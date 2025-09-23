@@ -1,0 +1,8 @@
+---
+description:App dev structure is
+1) the app loads from Ecwid https://my.ecwid.com/store/124288251#app:name=1faq-dev
+2) The Ecwid frame requests app URL: https://ec.1nax.app/, which is hosted on Render
+3) https://ec.1nax.app/ redirects to Ngrok tunnel https://vigorously-loving-pug.ngrok-free.app/
+globs:
+alwaysApply: true
+---

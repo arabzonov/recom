@@ -1,4 +1,4 @@
-const BaseDataAccess = require('./BaseDataAccess');
+import BaseDataAccess from './BaseDataAccess.js';
 
 /**
  * OAuth data access service
@@ -102,4 +102,4 @@ class OAuthService extends BaseDataAccess {
   }
 }
 
-module.exports = OAuthService;
+export default OAuthService;

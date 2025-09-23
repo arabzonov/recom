@@ -1,4 +1,4 @@
-const BaseDataAccess = require('./BaseDataAccess');
+import BaseDataAccess from './BaseDataAccess.js';
 
 /**
  * Recommendation Service - Handles all product recommendation logic
@@ -451,4 +451,4 @@ class RecommendationService extends BaseDataAccess {
 
 }
 
-module.exports = RecommendationService;
+export default RecommendationService;

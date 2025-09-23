@@ -1,12 +1,12 @@
-const BaseDataAccess = require('./BaseDataAccess');
-const StoreService = require('./StoreService');
-const OAuthService = require('./OAuthService');
-const ProductService = require('./ProductService');
-const OrderService = require('./OrderService');
-const RecommendationService = require('./RecommendationService');
-const CategoryService = require('./CategoryService');
+import BaseDataAccess from './BaseDataAccess.js';
+import StoreService from './StoreService.js';
+import OAuthService from './OAuthService.js';
+import ProductService from './ProductService.js';
+import OrderService from './OrderService.js';
+import RecommendationService from './RecommendationService.js';
+import CategoryService from './CategoryService.js';
 
-module.exports = {
+export {
   BaseDataAccess,
   StoreService,
   OAuthService,

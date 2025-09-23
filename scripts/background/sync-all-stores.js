@@ -10,10 +10,12 @@
  * Usage: node scripts/background/sync-all-stores.js
  */
 
-const axios = require('axios');
-const { initializeDatabase, closeDatabase } = require('../../server/config/database');
-const { StoreService, ProductService, OrderService, CategoryService } = require('../../server/data');
-require('dotenv').config();
+import axios from 'axios';
+import { initializeDatabase, closeDatabase } from '../../server/config/database.js';
+import { StoreService, ProductService, OrderService, CategoryService } from '../../server/data/index.js';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 // Ecwid API configuration
 const ECWID_API_BASE = 'https://app.ecwid.com/api/v3';
@@ -60,7 +62,13 @@ async function fetchStoreProducts(store) {
 
       offset += limit;
     } catch (error) {
-      console.error(`Error fetching products for store ${store.store_id}:`, error.message);
+      if (error.response?.status === 403) {
+        console.error(`❌ Access denied for store ${store.store_id}. Token may be expired or invalid.`);
+        console.error(`   Token: ${store.access_token ? 'Present' : 'Missing'}`);
+        console.error(`   Scopes: ${store.scopes || 'Not set'}`);
+      } else {
+        console.error(`Error fetching products for store ${store.store_id}:`, error.message);
+      }
       break;
     }
   }
@@ -203,8 +211,6 @@ async function storeOrders(storeId, orders) {
  */
 async function syncAllStores() {
   try {
-    await initializeDatabase();
-
     const stores = await getAuthenticatedStores();
 
     if (stores.length === 0) {
@@ -213,6 +219,13 @@ async function syncAllStores() {
 
     for (const store of stores) {
       try {
+        // Clean up existing data for this store only using data layer
+        console.log(`🧹 Cleaning up data for store ${store.store_id}...`);
+        const deletedProducts = await productService.deleteByStoreId(store.store_id);
+        const deletedOrders = await orderService.deleteByStoreId(store.store_id);
+        const deletedCategories = await categoryService.deleteByStoreId(store.store_id);
+        console.log(`✅ Cleaned ${deletedProducts} products, ${deletedOrders} orders, ${deletedCategories} categories for store ${store.store_id}`);
+        
         // Fetch and store products
         const products = await fetchStoreProducts(store);
         await storeProducts(store.store_id, products);

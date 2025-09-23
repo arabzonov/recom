@@ -1,5 +1,5 @@
-const BaseDataAccess = require('./BaseDataAccess');
-const RecommendationService = require('./RecommendationService');
+import BaseDataAccess from './BaseDataAccess.js';
+import RecommendationService from './RecommendationService.js';
 
 class ProductService extends BaseDataAccess {
   constructor() {
@@ -204,4 +204,4 @@ class ProductService extends BaseDataAccess {
   }
 }
 
-module.exports = ProductService;
+export default ProductService;

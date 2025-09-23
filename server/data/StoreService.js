@@ -1,4 +1,4 @@
-const BaseDataAccess = require('./BaseDataAccess');
+import BaseDataAccess from './BaseDataAccess.js';
 
 /**
  * Store data access service
@@ -124,6 +124,14 @@ class StoreService extends BaseDataAccess {
     return store && store.access_token;
   }
 
+  /**
+   * Find all authenticated stores (stores with access tokens)
+   * @returns {Promise<Array>} Array of authenticated stores
+   */
+  async findAuthenticated() {
+    return await this.query('SELECT * FROM stores WHERE access_token IS NOT NULL AND access_token != ""');
+  }
+
 }
 
-module.exports = StoreService;
+export default StoreService;

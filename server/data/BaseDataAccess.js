@@ -1,4 +1,4 @@
-const { dbQuery, dbRun, dbGet } = require('../config/database');
+import { dbQuery, dbRun, dbGet } from '../config/database.js';
 
 /**
  * Base data access class that provides common database operations
@@ -139,4 +139,4 @@ class BaseDataAccess {
   }
 }
 
-module.exports = BaseDataAccess;
+export default BaseDataAccess;

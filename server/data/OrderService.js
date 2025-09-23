@@ -1,4 +1,4 @@
-const BaseDataAccess = require('./BaseDataAccess');
+import BaseDataAccess from './BaseDataAccess.js';
 
 class OrderService extends BaseDataAccess {
   constructor() {
@@ -163,4 +163,4 @@ class OrderService extends BaseDataAccess {
   }
 }
 
-module.exports = OrderService;
+export default OrderService;

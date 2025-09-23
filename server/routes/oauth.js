@@ -1,6 +1,7 @@
-const express = require('express');
-const axios = require('axios');
-const { StoreService, OAuthService } = require('../data');
+import express from 'express';
+import axios from 'axios';
+import { StoreService, OAuthService } from '../data/index.js';
+
 const router = express.Router();
 
 // Initialize services
@@ -299,4 +300,4 @@ router.get('/callback', async (req, res) => {
 });
 
 
-module.exports = router;
+export default router;
