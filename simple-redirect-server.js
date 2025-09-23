@@ -1,12 +1,19 @@
 const express = require('express');
-const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Serve the simple redirect HTML file
+// Server-side redirect - no JavaScript needed
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  const targetUrl = 'https://vigorously-loving-pug.ngrok-free.app/';
+  const searchParams = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+  const finalUrl = targetUrl + searchParams;
+  
+  console.log('🔄 Server redirect from:', req.url);
+  console.log('🔄 Server redirect to:', finalUrl);
+  
+  // Server-side redirect (302)
+  res.redirect(302, finalUrl);
 });
 
 app.listen(PORT, () => {
