@@ -1,14 +1,22 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
-const path = require('path');
-require('dotenv').config();
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 
-const { initializeDatabase } = require('./config/database');
-const ecwidRoutes = require('./routes/ecwid');
-const oauthRoutes = require('./routes/oauth');
+import { initializeDatabase } from './config/database.js';
+import ecwidRoutes from './routes/ecwid.js';
+import oauthRoutes from './routes/oauth.js';
+
+// Configure dotenv
+dotenv.config();
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -95,6 +103,46 @@ app.use(express.static(path.join(__dirname, '../dist')));
 app.use('/api/ecwid', ecwidRoutes);
 app.use('/api/oauth', oauthRoutes);
 
+// Redirect route for ec.1nax.app to preserve Ecwid context
+app.get('/redirect', (req, res) => {
+  const targetUrl = 'https://vigorously-loving-pug.ngrok-free.app/';
+  
+  // Preserve all query parameters
+  const searchParams = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+  
+  // Build the final URL
+  const finalUrl = targetUrl + searchParams;
+  
+  console.log('🔄 Redirecting from:', req.url);
+  console.log('🔄 Redirecting to:', finalUrl);
+  
+  // Perform the redirect
+  res.redirect(302, finalUrl);
+});
+
+// Root redirect for ec.1nax.app (when accessed directly)
+app.get('/', (req, res) => {
+  // Check if this is a request from Ecwid (has payload parameter)
+  if (req.query.payload || req.query.lang) {
+    const targetUrl = 'https://vigorously-loving-pug.ngrok-free.app/';
+    
+    // Preserve all query parameters
+    const searchParams = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+    
+    // Build the final URL
+    const finalUrl = targetUrl + searchParams;
+    
+    console.log('🔄 Root redirect from Ecwid:', req.url);
+    console.log('🔄 Redirecting to:', finalUrl);
+    
+    // Perform the redirect
+    res.redirect(302, finalUrl);
+  } else {
+    // For other requests, serve the normal React app
+    res.sendFile(path.join(__dirname, '../dist/index.html'));
+  }
+});
+
 // Health check endpoint - NO DEFAULTS
 const APP_VERSION = process.env.APP_VERSION;
 if (!APP_VERSION) {
@@ -110,7 +158,7 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// Serve React app for all non-API routes
+// Serve React app for all other non-API routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../dist/index.html'));
 });
