@@ -1,21 +1,12 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
-  HomeIcon,
-  ShoppingBagIcon,
-  ClipboardDocumentListIcon,
-  ChartBarIcon,
   CogIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
 
 const navigation = [
-  { name: 'Dashboard', href: '/', icon: HomeIcon },
-  { name: 'Products', href: '/products', icon: ShoppingBagIcon },
-  { name: 'Orders', href: '/orders', icon: ClipboardDocumentListIcon },
-  { name: 'Analytics', href: '/analytics', icon: ChartBarIcon },
-  { name: 'Settings', href: '/settings', icon: CogIcon },
-  { name: 'Test Detection', href: '/test', icon: CogIcon },
+  { name: 'Settings', href: '/', icon: CogIcon },
 ];
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {

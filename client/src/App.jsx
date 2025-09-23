@@ -3,12 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import StoreSetup from './components/StoreSetup';
-import Dashboard from './pages/Dashboard';
-import Products from './pages/Products';
-import Orders from './pages/Orders';
-import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
-import TestStoreDetection from './pages/TestStoreDetection';
 import { EcwidProvider } from './hooks/useEcwid';
 
 function App() {
@@ -76,12 +71,8 @@ function App() {
               <div className="py-6">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                   <Routes>
-                    <Route path="/" element={<Dashboard />} />
-                    <Route path="/products" element={<Products />} />
-                    <Route path="/orders" element={<Orders />} />
-                    <Route path="/analytics" element={<Analytics />} />
+                    <Route path="/" element={<Settings />} />
                     <Route path="/settings" element={<Settings />} />
-                    <Route path="/test" element={<TestStoreDetection />} />
                   </Routes>
                 </div>
               </div>

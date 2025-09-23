@@ -8,9 +8,6 @@ require('dotenv').config();
 
 const { initializeDatabase } = require('./config/database');
 const ecwidRoutes = require('./routes/ecwid');
-const productRoutes = require('./routes/products');
-const orderRoutes = require('./routes/orders');
-const analyticsRoutes = require('./routes/analytics');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -63,9 +60,6 @@ app.use(express.static(path.join(__dirname, '../dist')));
 
 // API Routes
 app.use('/api/ecwid', ecwidRoutes);
-app.use('/api/products', productRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/analytics', analyticsRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
