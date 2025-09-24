@@ -1,0 +1,235 @@
+# Ecwid App Authentication Implementation
+
+## Overview
+This is a complete authentication system for an Ecwid app that handles payload decoding, access token management, and secure API communication. The system uses server-side payload decryption for security and automatically persists access tokens to the database.
+
+## Core Components
+
+### 1. Client-Side Store Detection (`client/src/utils/storeDetection.js`)
+
+**Purpose**: Detects store ID from various sources and sends payload to server for secure decryption.
+
+**Key Functions**:
+- `detectStoreId()` - Main async function that detects store ID
+- `debugStoreDetection()` - Debug logging for troubleshooting
+- `saveStoreConfiguration()` - Saves store config to localStorage
+- `loadStoreConfiguration()` - Loads store config from localStorage
+
+**Implementation**:
+```javascript
+export const detectStoreId = async () => {
+  // 1. Check for payload in URL parameters
+  const payload = urlParams.get('payload');
+  if (payload) {
+    // Send to server for secure decryption
+    const response = await fetch('/api/ecwid/decode-payload', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payload })
+    });
+    
+    if (response.ok) {
+      const result = await response.json();
+      if (result.success && result.data.store_id) {
+        // Store in localStorage
+        localStorage.setItem('ecwid_store_id', result.data.store_id);
+        localStorage.setItem('ecwid_access_token', result.data.access_token);
+        return result.data.store_id;
+      }
+    }
+  }
+  
+  // Fallback methods: URL params, localStorage, script tags, global objects
+  // ... other detection methods
+};
+```
+
+### 2. Server-Side Payload Decryption (`server/routes/ecwid.js`)
+
+**Purpose**: Securely decrypts Ecwid payloads using AES-128-CBC encryption.
+
+**Endpoint**: `POST /api/ecwid/decode-payload`
+
+**Implementation**:
+```javascript
+router.post('/decode-payload', async (req, res) => {
+  const { payload } = req.body;
+  const clientSecret = process.env.ECWID_CLIENT_SECRET;
+  
+  // Step 1: Get encryption key (first 16 characters)
+  const encryptionKey = clientSecret.substring(0, 16);
+  
+  // Step 2: Convert URL-safe base64 to standard base64
+  const base64Original = payload.replace(/-/g, '+').replace(/_/g, '/');
+  const paddedBase64 = base64Original + '='.repeat((4 - base64Original.length % 4) % 4);
+  
+  // Step 3: Decode base64 to binary
+  const decoded = Buffer.from(paddedBase64, 'base64');
+  
+  // Step 4: Extract IV (first 16 bytes) and payload
+  const iv = decoded.subarray(0, 16);
+  const encryptedPayload = decoded.subarray(16);
+  
+  // Step 5: Decrypt using AES-128-CBC
+  const decipher = crypto.createDecipheriv('aes-128-cbc', encryptionKey, iv);
+  decipher.setAutoPadding(true);
+  
+  let decrypted = decipher.update(encryptedPayload, null, 'utf8');
+  decrypted += decipher.final('utf8');
+  
+  // Step 6: Parse JSON and save to database
+  const payloadData = JSON.parse(decrypted);
+  
+  // Save to database
+  if (payloadData.store_id && payloadData.access_token) {
+    // Update or create store record
+    // ... database operations
+  }
+  
+  res.json({ success: true, data: payloadData });
+});
+```
+
+### 3. Database Schema (`server/config/database.js`)
+
+**Stores Table**:
+```sql
+CREATE TABLE IF NOT EXISTS stores (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  store_id TEXT UNIQUE NOT NULL,
+  store_name TEXT NOT NULL,
+  access_token TEXT,
+  refresh_token TEXT,
+  scopes TEXT,
+  webhook_secret TEXT,
+  settings TEXT DEFAULT '{}',
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+```
+
+### 4. Store Service (`server/data/StoreService.js`)
+
+**Purpose**: Manages store data operations.
+
+**Key Methods**:
+- `findByStoreId(storeId)` - Find store by ID
+- `createOrUpdate(storeData)` - Create or update store
+- `updateTokens(storeId, accessToken, refreshToken, scopes)` - Update tokens
+- `updateAccessToken(storeId, accessToken)` - Update access token only
+- `isAuthenticated(storeId)` - Check if store has access token
+
+### 5. Ecwid API Integration (`server/routes/ecwid.js`)
+
+**Purpose**: Handles Ecwid REST API calls with proper authentication.
+
+**Key Features**:
+- Uses Bearer token authentication (not query params)
+- Automatic data synchronization to local database
+- Error handling and rate limiting
+
+**API Endpoints**:
+- `GET /api/ecwid/store/:storeId` - Get store info
+- `GET /api/ecwid/store/:storeId/products` - Get products
+- `GET /api/ecwid/store/:storeId/orders` - Get orders
+- `GET /api/ecwid/store/:storeId/customers` - Get customers
+- `POST /api/ecwid/store` - Create/update store configuration
+
+**Authentication Header**:
+```javascript
+headers: {
+  'Authorization': `Bearer ${store.access_token}`,
+  'Content-Type': 'application/json'
+}
+```
+
+### 6. React Hook Integration (`client/src/hooks/useEcwid.jsx`)
+
+**Purpose**: Provides React components with Ecwid API access.
+
+**Key Features**:
+- Dynamic Ecwid script loading with store ID
+- Store ID detection and configuration
+- API status monitoring
+- Error handling and user feedback
+
+**Implementation**:
+```javascript
+const useEcwid = () => {
+  const [storeId, setStoreId] = useState(null);
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [api, setApi] = useState(null);
+  const [error, setError] = useState(null);
+
+  const initializeEcwid = async () => {
+    // Detect store ID
+    const detectedStoreId = await detectStoreId();
+    
+    if (detectedStoreId) {
+      // Load Ecwid script with store ID
+      await loadEcwidScript(detectedStoreId);
+      // Initialize API
+      // ... API initialization
+    }
+  };
+};
+```
+
+## Security Features
+
+1. **Server-Side Decryption**: Client secret never exposed to frontend
+2. **Bearer Token Authentication**: Uses proper Authorization headers
+3. **Environment Variables**: Sensitive data stored in .env
+4. **Database Persistence**: Access tokens securely stored
+5. **Error Handling**: Graceful fallbacks without exposing secrets
+
+## Environment Variables Required
+
+```bash
+ECWID_CLIENT_SECRET=your_client_secret_here
+```
+
+## Usage Flow
+
+1. **User opens app from Ecwid admin** → Payload in URL
+2. **Client detects payload** → Sends to server for decryption
+3. **Server decrypts payload** → Extracts store_id and access_token
+4. **Server saves to database** → Persists authentication data
+5. **Client receives store_id** → Loads Ecwid API with store ID
+6. **API calls use Bearer token** → Secure REST API communication
+
+## Key Files
+
+- `client/src/utils/storeDetection.js` - Store ID detection
+- `client/src/hooks/useEcwid.jsx` - React integration
+- `server/routes/ecwid.js` - API endpoints and payload decryption
+- `server/data/StoreService.js` - Database operations
+- `server/config/database.js` - Database schema
+
+## Ecwid Documentation References
+
+Based on the official Ecwid documentation:
+
+### Payload Decryption Algorithm
+- **Encryption**: AES-128-CBC
+- **Key**: First 16 characters of client_secret
+- **Encoding**: URL-safe base64
+- **IV**: First 16 bytes of decoded data
+- **Payload**: Remaining bytes after IV
+
+### Decrypted Payload Structure
+```json
+{
+  "store_id": 1234567,
+  "lang": "en",
+  "access_token": "secret_ab***cd",
+  "view_mode": "PAGE",
+  "public_token": "public_ASDlkDASmasdaslkdASkndasANJKLsAf"
+}
+```
+
+### API Authentication
+- **Method**: Bearer token in Authorization header
+- **Format**: `Authorization: Bearer {access_token}`
+- **Base URL**: `https://app.ecwid.com/api/v3/{store_id}/`
+
+This implementation provides a complete, secure authentication system for Ecwid apps with proper payload decryption, token management, and API integration.

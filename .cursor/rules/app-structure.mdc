@@ -1,0 +1,9 @@
+---
+description:This is an Ecwid app.
+It's opened from Ecwid admin https://my.ecwid.com/store/<store_id>#app:name=<app_name>
+Ecwid opens an iframe with my app which is located under https://ec.1nax.app
+For development I use onrender to host https://ec.1nax.app, which redirects to my Ngrok tunnel https://vigorously-loving-pug.ngrok-free.app/
+The onrender host just redirects requests.
+globs:
+alwaysApply: true
+---

@@ -1,10 +1,95 @@
-const express = require('express');
-const axios = require('axios');
-const { dbQuery, dbRun, dbGet } = require('../config/database');
+import express from 'express';
+import axios from 'axios';
+import crypto from 'crypto';
+import { dbQuery, dbRun, dbGet } from '../config/database.js';
+
 const router = express.Router();
 
 // Ecwid API base URL
 const ECWID_API_BASE = 'https://app.ecwid.com/api/v3';
+
+// Secure payload decoding endpoint
+router.post('/decode-payload', async (req, res) => {
+  try {
+    const { payload } = req.body;
+    
+    if (!payload) {
+      return res.status(400).json({ error: 'Payload is required' });
+    }
+    
+    // Get client secret from environment
+    const clientSecret = process.env.ECWID_CLIENT_SECRET;
+    if (!clientSecret) {
+      console.error('ECWID_CLIENT_SECRET not found in environment');
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+    
+    console.log('🔐 Decoding payload securely on server...');
+    
+    // Step 1: Get encryption key (first 16 characters of client secret)
+    const encryptionKey = clientSecret.substring(0, 16);
+    
+    // Step 2: Convert URL-safe base64 to standard base64
+    const base64Original = payload.replace(/-/g, '+').replace(/_/g, '/');
+    
+    // Step 3: Add padding if needed
+    const paddedBase64 = base64Original + '='.repeat((4 - base64Original.length % 4) % 4);
+    
+    // Step 4: Decode base64 to binary
+    const decoded = Buffer.from(paddedBase64, 'base64');
+    
+    // Step 5: Extract IV (first 16 bytes)
+    const iv = decoded.subarray(0, 16);
+    
+    // Step 6: Extract payload (remaining bytes)
+    const encryptedPayload = decoded.subarray(16);
+    
+    // Step 7: Decrypt using AES-128-CBC
+    const decipher = crypto.createDecipheriv('aes-128-cbc', encryptionKey, iv);
+    decipher.setAutoPadding(true);
+    
+    let decrypted = decipher.update(encryptedPayload, null, 'utf8');
+    decrypted += decipher.final('utf8');
+    
+    console.log('✅ Payload decrypted successfully');
+    
+    // Step 8: Parse JSON
+    const payloadData = JSON.parse(decrypted);
+    console.log('✅ JSON parsed successfully');
+    
+    // Save store configuration to database
+    if (payloadData.store_id && payloadData.access_token) {
+      try {
+        // Check if store already exists
+        // Insert or update store
+        await dbRun(`
+          INSERT OR REPLACE INTO stores (store_id, store_name, access_token)
+          VALUES (?, ?, ?)
+        `, [
+          payloadData.store_id,
+          payloadData.store_name || 'Ecwid Store',
+          payloadData.access_token
+        ]);
+        
+        console.log('🎉 Store configuration saved to database');
+      } catch (dbError) {
+        console.error('❌ Error saving to database:', dbError.message);
+      }
+    }
+    
+    res.json({
+      success: true,
+      data: payloadData
+    });
+    
+  } catch (error) {
+    console.error('❌ Error decoding payload:', error.message);
+    res.status(500).json({ 
+      error: 'Failed to decode payload',
+      details: error.message
+    });
+  }
+});
 
 // Middleware to get store credentials
 const getStoreCredentials = async (req, res, next) => {
@@ -57,166 +142,7 @@ router.get('/store/:storeId', getStoreCredentials, async (req, res) => {
   }
 });
 
-// Get products from Ecwid
-router.get('/store/:storeId/products', getStoreCredentials, async (req, res) => {
-  try {
-    const { store } = req;
-    const { limit = 20, offset = 0, keyword, categoryId } = req.query;
 
-    let url = `${ECWID_API_BASE}/${store.store_id}/products?limit=${limit}&offset=${offset}`;
-    
-    if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
-    if (categoryId) url += `&categoryId=${categoryId}`;
-
-    const response = await axios.get(url, {
-      headers: {
-        'Authorization': `Bearer ${store.access_token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    // Store products in local database
-    if (response.data.items) {
-      for (const product of response.data.items) {
-        await dbRun(`
-          INSERT OR REPLACE INTO products 
-          (store_id, ecwid_product_id, name, description, price, compare_price, sku, quantity, enabled, image_url, category_id, custom_fields, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        `, [
-          store.store_id,
-          product.id,
-          product.name,
-          product.description,
-          product.price,
-          product.compareToPrice,
-          product.sku,
-          product.quantity,
-          product.enabled ? 1 : 0,
-          product.imageUrl,
-          product.categoryId,
-          JSON.stringify(product.customFields || {})
-        ]);
-      }
-    }
-
-    res.json({
-      success: true,
-      data: response.data
-    });
-  } catch (error) {
-    console.error('Error fetching products:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch products',
-      details: error.response?.data || error.message
-    });
-  }
-});
-
-// Get orders from Ecwid
-router.get('/store/:storeId/orders', getStoreCredentials, async (req, res) => {
-  try {
-    const { store } = req;
-    const { limit = 20, offset = 0, status, paymentStatus } = req.query;
-
-    let url = `${ECWID_API_BASE}/${store.store_id}/orders?limit=${limit}&offset=${offset}`;
-    
-    if (status) url += `&status=${status}`;
-    if (paymentStatus) url += `&paymentStatus=${paymentStatus}`;
-
-    const response = await axios.get(url, {
-      headers: {
-        'Authorization': `Bearer ${store.access_token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    // Store orders in local database
-    if (response.data.items) {
-      for (const order of response.data.items) {
-        await dbRun(`
-          INSERT OR REPLACE INTO orders 
-          (store_id, ecwid_order_id, order_number, customer_email, customer_name, total, subtotal, tax_amount, shipping_amount, status, payment_status, shipping_status, order_data, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        `, [
-          store.store_id,
-          order.id,
-          order.orderNumber,
-          order.email,
-          order.customerName,
-          order.total,
-          order.subtotal,
-          order.taxAmount,
-          order.shippingAmount,
-          order.fulfillmentStatus,
-          order.paymentStatus,
-          order.shippingStatus,
-          JSON.stringify(order)
-        ]);
-      }
-    }
-
-    res.json({
-      success: true,
-      data: response.data
-    });
-  } catch (error) {
-    console.error('Error fetching orders:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch orders',
-      details: error.response?.data || error.message
-    });
-  }
-});
-
-// Get customers from Ecwid
-router.get('/store/:storeId/customers', getStoreCredentials, async (req, res) => {
-  try {
-    const { store } = req;
-    const { limit = 20, offset = 0, email } = req.query;
-
-    let url = `${ECWID_API_BASE}/${store.store_id}/customers?limit=${limit}&offset=${offset}`;
-    
-    if (email) url += `&email=${encodeURIComponent(email)}`;
-
-    const response = await axios.get(url, {
-      headers: {
-        'Authorization': `Bearer ${store.access_token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-
-    // Store customers in local database
-    if (response.data.items) {
-      for (const customer of response.data.items) {
-        await dbRun(`
-          INSERT OR REPLACE INTO customers 
-          (store_id, ecwid_customer_id, email, first_name, last_name, phone, customer_group_id, customer_data, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-        `, [
-          store.store_id,
-          customer.id,
-          customer.email,
-          customer.firstName,
-          customer.lastName,
-          customer.phone,
-          customer.customerGroupId,
-          JSON.stringify(customer)
-        ]);
-      }
-    }
-
-    res.json({
-      success: true,
-      data: response.data
-    });
-  } catch (error) {
-    console.error('Error fetching customers:', error);
-    res.status(500).json({ 
-      error: 'Failed to fetch customers',
-      details: error.response?.data || error.message
-    });
-  }
-});
 
 // Webhook handler for Ecwid events
 router.post('/webhook/:storeId', async (req, res) => {
@@ -230,29 +156,8 @@ router.post('/webhook/:storeId', async (req, res) => {
       // Add webhook signature verification here
     }
 
-    // Log the webhook event
-    await dbRun(`
-      INSERT INTO analytics (store_id, event_type, event_data, created_at)
-      VALUES (?, ?, ?, CURRENT_TIMESTAMP)
-    `, [storeId, eventType, JSON.stringify(data)]);
-
-    // Handle different event types
-    switch (eventType) {
-      case 'order.created':
-        console.log('New order created:', data);
-        break;
-      case 'order.updated':
-        console.log('Order updated:', data);
-        break;
-      case 'product.created':
-        console.log('New product created:', data);
-        break;
-      case 'product.updated':
-        console.log('Product updated:', data);
-        break;
-      default:
-        console.log('Unhandled webhook event:', eventType, data);
-    }
+    // Log webhook event
+    console.log(`Webhook event received for store ${storeId}:`, eventType, data);
 
     res.json({ success: true, message: 'Webhook received' });
   } catch (error) {
@@ -264,44 +169,23 @@ router.post('/webhook/:storeId', async (req, res) => {
 // Create or update store configuration
 router.post('/store', async (req, res) => {
   try {
-    const { storeId, storeName, accessToken, refreshToken, webhookSecret, settings } = req.body;
+    const { storeId, storeName, accessToken, refreshToken, webhookSecret } = req.body;
 
     if (!storeId) {
       return res.status(400).json({ error: 'Store ID is required' });
     }
 
-    // Check if store already exists
-    const existingStore = await dbGet('SELECT * FROM stores WHERE store_id = ?', [storeId]);
-
-    if (existingStore) {
-      // Update existing store
-      await dbRun(`
-        UPDATE stores 
-        SET store_name = ?, access_token = ?, refresh_token = ?, webhook_secret = ?, 
-            settings = ?, updated_at = CURRENT_TIMESTAMP
-        WHERE store_id = ?
-      `, [
-        storeName || existingStore.store_name,
-        accessToken || existingStore.access_token,
-        refreshToken || existingStore.refresh_token,
-        webhookSecret || existingStore.webhook_secret,
-        JSON.stringify(settings || {}),
-        storeId
-      ]);
-    } else {
-      // Create new store
-      await dbRun(`
-        INSERT INTO stores (store_id, store_name, access_token, refresh_token, webhook_secret, settings)
-        VALUES (?, ?, ?, ?, ?, ?)
-      `, [
-        storeId,
-        storeName || 'Ecwid Store',
-        accessToken || null,
-        refreshToken || null,
-        webhookSecret || null,
-        JSON.stringify(settings || {})
-      ]);
-    }
+    // Insert or update store
+    await dbRun(`
+      INSERT OR REPLACE INTO stores (store_id, store_name, access_token, refresh_token, webhook_secret)
+      VALUES (?, ?, ?, ?, ?)
+    `, [
+      storeId,
+      storeName || 'Ecwid Store',
+      accessToken || null,
+      refreshToken || null,
+      webhookSecret || null
+    ]);
 
     // Get the updated/created store
     const store = await dbGet('SELECT * FROM stores WHERE store_id = ?', [storeId]);
@@ -316,39 +200,5 @@ router.post('/store', async (req, res) => {
   }
 });
 
-// Get store statistics
-router.get('/store/:storeId/stats', getStoreCredentials, async (req, res) => {
-  try {
-    const { store } = req;
 
-    // Get local database statistics
-    const [productCount, orderCount, customerCount] = await Promise.all([
-      dbGet('SELECT COUNT(*) as count FROM products WHERE store_id = ?', [store.store_id]),
-      dbGet('SELECT COUNT(*) as count FROM orders WHERE store_id = ?', [store.store_id]),
-      dbGet('SELECT COUNT(*) as count FROM customers WHERE store_id = ?', [store.store_id])
-    ]);
-
-    // Get recent analytics
-    const recentAnalytics = await dbQuery(`
-      SELECT event_type, COUNT(*) as count 
-      FROM analytics 
-      WHERE store_id = ? AND created_at >= datetime('now', '-7 days')
-      GROUP BY event_type
-    `, [store.store_id]);
-
-    res.json({
-      success: true,
-      data: {
-        products: productCount.count,
-        orders: orderCount.count,
-        customers: customerCount.count,
-        recentAnalytics
-      }
-    });
-  } catch (error) {
-    console.error('Error fetching store stats:', error);
-    res.status(500).json({ error: 'Failed to fetch store statistics' });
-  }
-});
-
-module.exports = router;
+export default router;

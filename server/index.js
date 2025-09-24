@@ -1,13 +1,19 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const rateLimit = require('express-rate-limit');
-const path = require('path');
-require('dotenv').config();
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import rateLimit from 'express-rate-limit';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
 
-const { initializeDatabase } = require('./config/database');
-const ecwidRoutes = require('./routes/ecwid');
+// Database initialization removed - use setup.sql instead
+import ecwidRoutes from './routes/ecwid.js';
+
+dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -97,8 +103,7 @@ app.use((req, res) => {
 // Initialize database and start server
 const startServer = async () => {
   try {
-    await initializeDatabase();
-    console.log('✅ Database initialized successfully');
+    console.log('✅ Server starting (database setup via setup.sql)');
     
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);

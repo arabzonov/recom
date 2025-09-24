@@ -1,0 +1,5 @@
+---
+description:never delete any functionality unless explicitly asked. If you delete anything functional ask before proceeding. NEVER just kill what works!
+globs:
+alwaysApply: true
+---

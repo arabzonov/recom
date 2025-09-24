@@ -2,6 +2,7 @@
   "name": "ecwid-plugin",
   "version": "1.0.0",
   "description": "A custom Ecwid plugin with Node.js + Express + React + SQLite",
+  "type": "module",
   "main": "server/index.js",
   "scripts": {
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
@@ -15,7 +16,8 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "db:migrate": "node server/scripts/migrate.js",
-    "db:seed": "node server/scripts/seed.js"
+    "db:seed": "node server/scripts/seed.js",
+    "sync:all": "node scripts/background/sync-all-stores.js"
   },
   "keywords": [
     "ecwid",

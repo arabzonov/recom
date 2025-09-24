@@ -9,7 +9,7 @@ import {
 } from '@heroicons/react/24/outline';
 
 const Settings = () => {
-  const { isLoaded, storeId, trackEvent } = useEcwid();
+  const { isLoaded, storeId, error, setStoreIdAndReload, trackEvent } = useEcwid();
   const [settings, setSettings] = useState({
     storeName: '',
     clientId: '',
@@ -35,6 +35,8 @@ const Settings = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState('');
+  const [storeIdInput, setStoreIdInput] = useState('');
+  const [isConfiguringStore, setIsConfiguringStore] = useState(false);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -120,6 +122,27 @@ const Settings = () => {
     }));
   };
 
+  const handleStoreIdConfiguration = async () => {
+    if (!storeIdInput.trim()) {
+      setMessage('Please enter a valid store ID');
+      return;
+    }
+
+    try {
+      setIsConfiguringStore(true);
+      setMessage('');
+      
+      await setStoreIdAndReload(storeIdInput.trim());
+      setMessage('Store ID configured successfully!');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (error) {
+      console.error('Error configuring store ID:', error);
+      setMessage('Error configuring store ID');
+    } finally {
+      setIsConfiguringStore(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -146,6 +169,119 @@ const Settings = () => {
             : 'bg-red-50 text-red-800 border border-red-200'
         }`}>
           {message}
+        </div>
+      )}
+
+      {/* Store ID Configuration */}
+      {!storeId && (
+        <div className="card border-yellow-200 bg-yellow-50">
+          <div className="card-header">
+            <div className="flex items-center">
+              <CloudIcon className="h-5 w-5 text-yellow-600 mr-2" />
+              <h3 className="text-lg font-medium text-yellow-800">Store Configuration Required</h3>
+            </div>
+          </div>
+          <div className="card-body space-y-4">
+            <div className="bg-yellow-100 border border-yellow-300 rounded-md p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-yellow-800">
+                    Ecwid Store ID Required
+                  </h3>
+                  <div className="mt-2 text-sm text-yellow-700">
+                    <p>
+                      To use this plugin, you need to configure your Ecwid Store ID. 
+                      This allows the plugin to connect to your Ecwid store and access the API.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <label className="form-label">Ecwid Store ID</label>
+              <div className="flex space-x-2">
+                <input
+                  type="text"
+                  value={storeIdInput}
+                  onChange={(e) => setStoreIdInput(e.target.value)}
+                  className="form-input flex-1"
+                  placeholder="Enter your Ecwid Store ID (e.g., 12345678)"
+                />
+                <button
+                  onClick={handleStoreIdConfiguration}
+                  disabled={isConfiguringStore || !storeIdInput.trim()}
+                  className="btn btn-primary"
+                >
+                  {isConfiguringStore ? (
+                    <>
+                      <div className="spinner w-4 h-4 mr-2"></div>
+                      Configuring...
+                    </>
+                  ) : (
+                    'Configure Store'
+                  )}
+                </button>
+              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                You can find your Store ID in your Ecwid admin panel under Settings → General.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Ecwid API Status */}
+      {storeId && (
+        <div className="card">
+          <div className="card-header">
+            <div className="flex items-center">
+              <CloudIcon className="h-5 w-5 text-gray-400 mr-2" />
+              <h3 className="text-lg font-medium text-gray-900">Ecwid API Status</h3>
+            </div>
+          </div>
+          <div className="card-body">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium text-gray-700">Store ID</p>
+                <p className="text-sm text-gray-500">{storeId}</p>
+              </div>
+              <div className="flex items-center">
+                {isLoaded ? (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <svg className="w-2 h-2 mr-1" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3" />
+                    </svg>
+                    Connected
+                  </span>
+                ) : error ? (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                    <svg className="w-2 h-2 mr-1" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3" />
+                    </svg>
+                    Error
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                    <svg className="w-2 h-2 mr-1" fill="currentColor" viewBox="0 0 8 8">
+                      <circle cx="4" cy="4" r="3" />
+                    </svg>
+                    Loading...
+                  </span>
+                )}
+              </div>
+            </div>
+            {error && (
+              <div className="mt-2 text-sm text-red-600">
+                {error}
+              </div>
+            )}
+          </div>
         </div>
       )}
 
