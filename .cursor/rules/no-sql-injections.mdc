@@ -1,0 +1,5 @@
+---
+description:there must be no direct SQL injections. Use the data layer wrappers for that. nver insert sqk directly in the logic.
+globs:
+alwaysApply: true
+---

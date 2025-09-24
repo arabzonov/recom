@@ -98,3 +98,9 @@ temp/
 
 # Ecwid specific
 crane.config.local.json
+
+# Database files
+data/ecwid_plugin.db
+data/*.db-shm
+data/*.db-wal
+data/*.db-journal

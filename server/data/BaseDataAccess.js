@@ -57,20 +57,52 @@ class BaseDataAccess {
     const params = [];
 
     if (options.where) {
+<<<<<<< HEAD
+=======
+      // Validate where clause to prevent SQL injection
+      if (typeof options.where !== 'string' || !/^[a-zA-Z_][a-zA-Z0-9_]*\s*[=<>!]+\s*\?$/.test(options.where.trim())) {
+        throw new Error('Invalid where clause format. Use format: "column = ?"');
+      }
+>>>>>>> main
       sql += ` WHERE ${options.where}`;
       params.push(...options.params || []);
     }
 
     if (options.orderBy) {
+<<<<<<< HEAD
+=======
+      // Validate orderBy clause to prevent SQL injection
+      if (typeof options.orderBy !== 'string' || !/^[a-zA-Z_][a-zA-Z0-9_]*(\s+(ASC|DESC))?$/.test(options.orderBy.trim())) {
+        throw new Error('Invalid orderBy clause format. Use format: "column ASC" or "column DESC"');
+      }
+>>>>>>> main
       sql += ` ORDER BY ${options.orderBy}`;
     }
 
     if (options.limit) {
+<<<<<<< HEAD
       sql += ` LIMIT ${options.limit}`;
     }
 
     if (options.offset) {
       sql += ` OFFSET ${options.offset}`;
+=======
+      // Validate limit to prevent SQL injection
+      const limit = parseInt(options.limit);
+      if (isNaN(limit) || limit < 0 || limit > 10000) {
+        throw new Error('Invalid limit value. Must be a number between 0 and 10000');
+      }
+      sql += ` LIMIT ${limit}`;
+    }
+
+    if (options.offset) {
+      // Validate offset to prevent SQL injection
+      const offset = parseInt(options.offset);
+      if (isNaN(offset) || offset < 0) {
+        throw new Error('Invalid offset value. Must be a non-negative number');
+      }
+      sql += ` OFFSET ${offset}`;
+>>>>>>> main
     }
 
     return await this.query(sql, params);

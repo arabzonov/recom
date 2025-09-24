@@ -7,6 +7,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
+<<<<<<< HEAD
 import { initializeDatabase } from './config/database.js';
 import ecwidRoutes from './routes/ecwid.js';
 import oauthRoutes from './routes/oauth.js';
@@ -15,6 +16,13 @@ import oauthRoutes from './routes/oauth.js';
 dotenv.config();
 
 // Get __dirname equivalent for ES modules
+=======
+// Database initialization removed - use setup.sql instead
+import ecwidRoutes from './routes/ecwid.js';
+
+dotenv.config();
+
+>>>>>>> main
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -97,10 +105,14 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve static files from the React app build
-app.use(express.static(path.join(__dirname, '../dist')));
+const distPath = path.join(__dirname, '../../dist');
+console.log('📁 Static files path:', distPath);
+console.log('📁 __dirname:', __dirname);
+app.use(express.static(distPath));
 
 // API Routes
 app.use('/api/ecwid', ecwidRoutes);
+<<<<<<< HEAD
 app.use('/api/oauth', oauthRoutes);
 
 // Redirect route for ec.1nax.app to preserve Ecwid context
@@ -149,6 +161,8 @@ if (!APP_VERSION) {
   console.error('❌ APP_VERSION environment variable is required');
   process.exit(1);
 }
+=======
+>>>>>>> main
 
 app.get('/api/health', (req, res) => {
   res.json({ 
@@ -160,7 +174,9 @@ app.get('/api/health', (req, res) => {
 
 // Serve React app for all other non-API routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '../dist/index.html'));
+  const indexPath = path.join(__dirname, '../../dist/index.html');
+  console.log('📄 Index file path:', indexPath);
+  res.sendFile(indexPath);
 });
 
 // Error handling middleware
@@ -180,8 +196,7 @@ app.use((req, res) => {
 // Initialize database and start server
 const startServer = async () => {
   try {
-    await initializeDatabase();
-    console.log('✅ Database initialized successfully');
+    console.log('✅ Server starting (database setup via setup.sql)');
     
     app.listen(PORT, () => {
       console.log(`🚀 Server running on port ${PORT}`);

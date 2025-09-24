@@ -23,13 +23,18 @@ class StoreService extends BaseDataAccess {
    * @returns {Promise<Object>} Store record
    */
   async createOrUpdate(storeData) {
+<<<<<<< HEAD
     const { storeId, storeName, accessToken, refreshToken, scopes, settings } = storeData;
+=======
+    const { storeId, storeName, accessToken, refreshToken, scopes } = storeData;
+>>>>>>> main
 
     // Check if store already exists
     const existingStore = await this.findByStoreId(storeId);
 
     if (existingStore) {
       // Update existing store
+<<<<<<< HEAD
       const updateData = {
         store_name: storeName || existingStore.store_name,
         access_token: accessToken || existingStore.access_token,
@@ -48,6 +53,17 @@ class StoreService extends BaseDataAccess {
         updateData.refresh_token,
         updateData.scopes,
         updateData.settings,
+=======
+      await this.execute(`
+        UPDATE stores 
+        SET store_name = ?, access_token = ?, refresh_token = ?, scopes = ?
+        WHERE store_id = ?
+      `, [
+        storeName || existingStore.store_name,
+        accessToken || existingStore.access_token,
+        refreshToken || existingStore.refresh_token,
+        scopes || existingStore.scopes,
+>>>>>>> main
         storeId
       ]);
 
@@ -55,15 +71,24 @@ class StoreService extends BaseDataAccess {
     } else {
       // Create new store
       await this.execute(`
+<<<<<<< HEAD
         INSERT INTO stores (store_id, store_name, access_token, refresh_token, scopes, settings)
         VALUES (?, ?, ?, ?, ?, ?)
+=======
+        INSERT INTO stores (store_id, store_name, access_token, refresh_token, scopes)
+        VALUES (?, ?, ?, ?, ?)
+>>>>>>> main
       `, [
         storeId,
         storeName || 'Ecwid Store',
         accessToken || null,
         refreshToken || null,
+<<<<<<< HEAD
         scopes || null,
         JSON.stringify(settings || {})
+=======
+        scopes || null
+>>>>>>> main
       ]);
 
       return await this.findByStoreId(storeId);
@@ -87,6 +112,23 @@ class StoreService extends BaseDataAccess {
   }
 
   /**
+<<<<<<< HEAD
+=======
+   * Update access token only
+   * @param {string} storeId - Store ID
+   * @param {string} accessToken - Access token
+   * @returns {Promise<Object>} Update result
+   */
+  async updateAccessToken(storeId, accessToken) {
+    return await this.execute(`
+      UPDATE stores 
+      SET access_token = ?
+      WHERE store_id = ?
+    `, [accessToken, storeId]);
+  }
+
+  /**
+>>>>>>> main
    * Update store profile
    * @param {string} storeId - Store ID
    * @param {string} storeName - Store name

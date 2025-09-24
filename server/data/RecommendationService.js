@@ -242,6 +242,14 @@ class RecommendationService extends BaseDataAccess {
     const allExclusions = [excludeProductId, ...excludeList];
     const exclusionConditions = allExclusions.map(() => 'ecwid_product_id != ?').join(' AND ');
 
+<<<<<<< HEAD
+=======
+    // Validate that we have proper conditions to prevent SQL injection
+    if (sourceCategories.length === 0) {
+      throw new Error('No source categories provided for cross-sell search');
+    }
+
+>>>>>>> main
     const sql = `
       SELECT ecwid_product_id 
       FROM products 
@@ -290,6 +298,14 @@ class RecommendationService extends BaseDataAccess {
     const allExclusions = [excludeProductId, ...excludeList];
     const exclusionConditions = allExclusions.map(() => 'ecwid_product_id != ?').join(' AND ');
 
+<<<<<<< HEAD
+=======
+    // Validate that we have proper conditions to prevent SQL injection
+    if (sourceCategories.length === 0) {
+      throw new Error('No source categories provided for category search');
+    }
+
+>>>>>>> main
     const sql = `
       SELECT ecwid_product_id 
       FROM products 
@@ -326,6 +342,14 @@ class RecommendationService extends BaseDataAccess {
     const allExclusions = [excludeProductId, ...excludeList];
     const exclusionConditions = allExclusions.map(() => 'ecwid_product_id != ?').join(' AND ');
 
+<<<<<<< HEAD
+=======
+    // Validate that we have proper conditions to prevent SQL injection
+    if (allExclusions.length === 0) {
+      throw new Error('No exclusion conditions provided for global search');
+    }
+
+>>>>>>> main
     const sql = `
       SELECT ecwid_product_id 
       FROM products 
@@ -423,6 +447,7 @@ class RecommendationService extends BaseDataAccess {
    */
   async getProductRecommendations(storeId, productId) {
     const product = await this.get(
+<<<<<<< HEAD
       'SELECT upsell_recommendations FROM products WHERE store_id = ? AND ecwid_product_id = ?',
       [storeId, productId]
     );
@@ -432,6 +457,17 @@ class RecommendationService extends BaseDataAccess {
     }
 
     const recommendationIds = JSON.parse(product.upsell_recommendations);
+=======
+      'SELECT upsells FROM products WHERE store_id = ? AND ecwid_product_id = ?',
+      [storeId, productId]
+    );
+
+    if (!product || !product.upsells) {
+      return [];
+    }
+
+    const recommendationIds = JSON.parse(product.upsells);
+>>>>>>> main
     
     if (recommendationIds.length === 0) {
       return [];

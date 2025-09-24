@@ -11,7 +11,11 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+<<<<<<< HEAD
     host: true,
+=======
+    host: true, // Allow external connections
+>>>>>>> main
     allowedHosts: [
       'vigorously-loving-pug.ngrok-free.app',
       'localhost',
