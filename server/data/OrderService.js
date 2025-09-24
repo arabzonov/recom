@@ -30,41 +30,27 @@ class OrderService extends BaseDataAccess {
     const params = [storeId];
 
     if (orderBy) {
-<<<<<<< HEAD
-      sql += ` ORDER BY ${orderBy}`;
-    }
-    if (limit) {
-      sql += ` LIMIT ?`;
-      params.push(limit);
-    }
-    if (offset) {
-      sql += ` OFFSET ?`;
-      params.push(offset);
-=======
-      // Validate orderBy clause to prevent SQL injection
-      if (typeof orderBy !== 'string' || !/^[a-zA-Z_][a-zA-Z0-9_]*(\s+(ASC|DESC))?$/.test(orderBy.trim())) {
-        throw new Error('Invalid orderBy clause format. Use format: "column ASC" or "column DESC"');
+      // Validate ORDER BY clause to prevent SQL injection
+      if (typeof orderBy !== 'string' || !this.isValidOrderByClause(orderBy)) {
+        throw new Error('Invalid ORDER BY clause: must be a safe column name with optional ASC/DESC');
       }
       sql += ` ORDER BY ${orderBy}`;
     }
     if (limit) {
-      // Validate limit to prevent SQL injection
+      // Validate LIMIT to prevent SQL injection
       const limitNum = parseInt(limit);
       if (isNaN(limitNum) || limitNum < 0 || limitNum > 10000) {
-        throw new Error('Invalid limit value. Must be a number between 0 and 10000');
+        throw new Error('Invalid LIMIT: must be a number between 0 and 10000');
       }
-      sql += ` LIMIT ?`;
-      params.push(limitNum);
+      sql += ` LIMIT ${limitNum}`;
     }
     if (offset) {
-      // Validate offset to prevent SQL injection
+      // Validate OFFSET to prevent SQL injection
       const offsetNum = parseInt(offset);
       if (isNaN(offsetNum) || offsetNum < 0) {
-        throw new Error('Invalid offset value. Must be a non-negative number');
+        throw new Error('Invalid OFFSET: must be a non-negative number');
       }
-      sql += ` OFFSET ?`;
-      params.push(offsetNum);
->>>>>>> main
+      sql += ` OFFSET ${offsetNum}`;
     }
 
     return await this.query(sql, params);
@@ -140,7 +126,6 @@ class OrderService extends BaseDataAccess {
         
         await this.createOrUpdate(orderData);
       } catch (error) {
-        console.error(`Error processing order ${orderData.ecwidOrderId}:`, error.message);
         errors++;
       }
     }
@@ -180,7 +165,6 @@ class OrderService extends BaseDataAccess {
         await this.createOrUpdate(orderData);
         created++;
       } catch (error) {
-        console.error(`Error processing order ${order.id}:`, error.message);
         errors++;
       }
     }

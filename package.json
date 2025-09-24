@@ -1,9 +1,9 @@
 {
   "name": "ecwid-plugin",
   "version": "1.0.0",
+  "type": "module",
   "description": "A custom Ecwid plugin with Node.js + Express + React + SQLite",
   "main": "server/index.js",
-  "type": "module",
   "scripts": {
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
     "server:dev": "nodemon server/index.js",
@@ -31,13 +31,11 @@
   "dependencies": {
     "@heroicons/react": "^2.2.0",
     "axios": "^1.6.0",
-    "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-rate-limit": "^7.1.5",
     "helmet": "^7.1.0",
-    "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "p-queue": "^8.1.1",
     "react-router-dom": "^7.9.1",

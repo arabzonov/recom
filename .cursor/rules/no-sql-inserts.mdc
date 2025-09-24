@@ -1,5 +1,0 @@
----
-description:never update DB directly - write proper data layers, incapsulate this within data access classes and functions
-globs:
-alwaysApply: true
----

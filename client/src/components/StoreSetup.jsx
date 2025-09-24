@@ -17,154 +17,182 @@ const StoreSetup = ({ onSetupComplete }) => {
   const [isConfiguring, setIsConfiguring] = useState(false);
   const [manualStoreId, setManualStoreId] = useState('');
 
-  console.log('🔧 StoreSetup component rendering...');
-  console.log('StoreSetup props:', { onSetupComplete });
-  console.log('StoreSetup state:', { setupStatus, storeInfo, error, isConfiguring, manualStoreId });
-  console.log('StoreSetup useEcwid:', { storeId, isLoaded });
-
   useEffect(() => {
-    console.log('📋 StoreSetup useEffect running...');
-    console.log('useEffect dependencies:', { isLoaded, storeId });
-    
     if (isLoaded && storeId) {
-      console.log('✅ Ecwid loaded and storeId found, checking store setup...');
       checkStoreSetup();
     } else if (isLoaded && !storeId) {
-      console.log('⚠️ Ecwid loaded but no storeId detected, showing manual input...');
-      // If Ecwid is loaded but no store ID detected, show manual input
       setSetupStatus('needs_manual_store_id');
-    } else {
-      console.log('⏳ Waiting for Ecwid to load...', { isLoaded, storeId });
     }
   }, [isLoaded, storeId]);
 
   const checkStoreSetup = async () => {
     try {
-      console.log('🔍 checkStoreSetup called for storeId:', storeId);
       setSetupStatus('checking');
       
       // First check OAuth status
-      console.log('📡 Checking OAuth status...');
       const oauthResponse = await fetch(`/api/oauth/status/${storeId}`);
-      console.log('OAuth response status:', oauthResponse.status);
       const oauthData = await oauthResponse.json();
-      console.log('OAuth response data:', oauthData);
-      
+
       if (oauthData.success && oauthData.authenticated) {
-        console.log('✅ OAuth authenticated, store is configured');
         setStoreInfo(oauthData.store);
         setSetupStatus('configured');
         onSetupComplete(oauthData.store);
         return;
       }
-      
-      // Check if store is already configured in our database (legacy)
-      const response = await fetch(`/api/ecwid/store/${storeId}`);
-      
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setStoreInfo(data.data);
+
+      // If not OAuth authenticated, check if we can get store info directly
+      try {
+        const storeResponse = await fetch(`/api/ecwid/store/${storeId}`);
+        const storeData = await storeResponse.json();
+        
+        if (storeData.success) {
+          setStoreInfo(storeData.data);
           setSetupStatus('configured');
-          onSetupComplete(data.data);
+          onSetupComplete(storeData.data);
           return;
         }
+      } catch (apiError) {
+        // Continue to OAuth setup
       }
-      
-      // Store not configured, show setup options
-      setSetupStatus('needs_setup');
-      
+
+      // If we get here, store needs OAuth setup
+      setSetupStatus('needs_oauth');
     } catch (error) {
-      console.error('Error checking store setup:', error);
-      setError('Failed to check store configuration');
+      setError('Failed to check store setup');
       setSetupStatus('error');
     }
   };
 
-  const autoConfigureStore = async () => {
+  const handleManualStoreIdSubmit = async (e) => {
+    e.preventDefault();
+    if (!manualStoreId.trim()) return;
+
+    setIsConfiguring(true);
     try {
-      setIsConfiguring(true);
-      setSetupStatus('configuring');
-      
-      // Try to get store info from Ecwid API
-      let storeData = null;
-      
-      if (window.Ecwid && window.Ecwid.API) {
-        try {
-          // This would require proper authentication, but we'll simulate it
-          storeData = {
-            name: 'Auto-detected Store',
-            storeId: storeId,
-            currency: 'USD',
-            timezone: 'UTC'
-          };
-        } catch (apiError) {
-          console.log('Could not fetch from Ecwid API:', apiError);
-        }
-      }
-      
-      // Create store configuration in our database
+      // Try to auto-configure with the manual store ID
       const response = await fetch('/api/ecwid/store', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          storeId: storeId,
-          storeName: storeData?.name || 'Ecwid Store',
-          settings: {
-            autoConfigured: true,
-            currency: storeData?.currency || 'USD',
-            timezone: storeData?.timezone || 'UTC',
-            configuredAt: new Date().toISOString()
-          }
-        })
+          storeId: manualStoreId.trim(),
+          storeName: `Store ${manualStoreId}`,
+        }),
       });
-      
+
       if (response.ok) {
-        const data = await response.json();
-        setStoreInfo(data.data);
-        setSetupStatus('configured');
-        onSetupComplete(data.data);
+        const result = await response.json();
+        if (result.success) {
+          setStoreInfo(result.data);
+          setSetupStatus('configured');
+          onSetupComplete(result.data);
+        } else {
+          setError('Failed to configure store');
+        }
       } else {
-        throw new Error('Failed to configure store');
+        setError('Failed to configure store');
       }
-      
     } catch (error) {
-      console.error('Error auto-configuring store:', error);
-      setError('Failed to auto-configure store');
-      setSetupStatus('error');
+      setError('Error configuring store');
     } finally {
       setIsConfiguring(false);
     }
   };
 
-  const handleManualSetup = () => {
-    // Redirect to settings page for manual configuration
-    window.location.href = '/settings';
+  const handleOAuthSuccess = (store) => {
+    setStoreInfo(store);
+    setSetupStatus('configured');
+    onSetupComplete(store);
   };
 
-  console.log('🎯 StoreSetup render decision - setupStatus:', setupStatus);
+  const handleOAuthError = (error) => {
+    setError(`OAuth failed: ${error}`);
+    setSetupStatus('error');
+  };
 
   if (setupStatus === 'checking') {
-    console.log('⏳ Rendering checking screen...');
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="spinner w-8 h-8 mx-auto mb-4"></div>
-          <p className="text-gray-600">Checking store configuration...</p>
+          <div className="spinner w-12 h-12 mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Checking Store Setup</h2>
+          <p className="text-gray-600">Verifying your store configuration...</p>
         </div>
       </div>
     );
   }
 
-  if (setupStatus === 'configuring') {
+  if (setupStatus === 'needs_manual_store_id') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="spinner w-8 h-8 mx-auto mb-4"></div>
-          <p className="text-gray-600">Configuring your store...</p>
-          <p className="text-sm text-gray-500 mt-2">This may take a few moments</p>
+        <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6">
+          <div className="text-center mb-6">
+            <ExclamationTriangleIcon className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Store ID Required</h2>
+            <p className="text-gray-600">
+              We couldn't automatically detect your store ID. Please enter it manually.
+            </p>
+          </div>
+
+          <form onSubmit={handleManualStoreIdSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="storeId" className="block text-sm font-medium text-gray-700 mb-1">
+                Store ID
+              </label>
+              <input
+                type="text"
+                id="storeId"
+                value={manualStoreId}
+                onChange={(e) => setManualStoreId(e.target.value)}
+                placeholder="Enter your Ecwid store ID"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={isConfiguring || !manualStoreId.trim()}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isConfiguring ? 'Configuring...' : 'Configure Store'}
+            </button>
+          </form>
+
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (setupStatus === 'needs_oauth') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6">
+          <div className="text-center mb-6">
+            <CloudIcon className="h-12 w-12 text-blue-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Connect to Ecwid</h2>
+            <p className="text-gray-600">
+              Connect your Ecwid store to enable the plugin functionality.
+            </p>
+          </div>
+
+          <OAuthButton
+            storeId={storeId}
+            onSuccess={handleOAuthSuccess}
+            onError={handleOAuthError}
+          />
+
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-red-600 text-sm">{error}</p>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -173,18 +201,32 @@ const StoreSetup = ({ onSetupComplete }) => {
   if (setupStatus === 'configured') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <CheckCircleIcon className="h-16 w-16 text-green-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Store Ready!</h2>
-          <p className="text-gray-600 mb-4">
-            Your store "{storeInfo?.name}" has been configured successfully.
-          </p>
-          <button 
-            onClick={() => onSetupComplete(storeInfo)}
-            className="btn btn-primary"
-          >
-            Continue to Dashboard
-          </button>
+        <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6">
+          <div className="text-center">
+            <CheckCircleIcon className="h-12 w-12 text-green-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Store Connected</h2>
+            <p className="text-gray-600 mb-4">
+              Your store is successfully connected and configured.
+            </p>
+            {storeInfo && (
+              <div className="bg-gray-50 rounded-md p-3 mb-4">
+                <p className="text-sm text-gray-600">
+                  <strong>Store ID:</strong> {storeInfo.store_id || storeInfo.storeId}
+                </p>
+                {storeInfo.store_name && (
+                  <p className="text-sm text-gray-600">
+                    <strong>Store Name:</strong> {storeInfo.store_name}
+                  </p>
+                )}
+              </div>
+            )}
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+            >
+              Continue to App
+            </button>
+          </div>
         </div>
       </div>
     );
@@ -193,156 +235,18 @@ const StoreSetup = ({ onSetupComplete }) => {
   if (setupStatus === 'error') {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <ExclamationTriangleIcon className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Setup Required</h2>
-          <p className="text-gray-600 mb-4">
-            {error || 'Your store needs to be configured before you can use the plugin.'}
-          </p>
-          <div className="space-y-3">
-            <OAuthButton 
-              storeId={storeId}
-              onSuccess={(store) => {
-                setStoreInfo(store);
-                setSetupStatus('configured');
-                onSetupComplete(store);
-              }}
-              onError={(error) => {
-                setError(error);
-                setSetupStatus('error');
-              }}
-              className="w-full"
-            />
-            <button 
-              onClick={autoConfigureStore}
-              disabled={isConfiguring}
-              className="btn btn-outline w-full"
-            >
-              {isConfiguring ? (
-                <>
-                  <div className="spinner w-4 h-4 mr-2"></div>
-                  Auto-Configure
-                </>
-              ) : (
-                <>
-                  <CloudIcon className="h-5 w-5 mr-2" />
-                  Try Auto-Configuration
-                </>
-              )}
-            </button>
-            <button 
-              onClick={handleManualSetup}
-              className="btn btn-outline w-full"
-            >
-              <CogIcon className="h-5 w-5 mr-2" />
-              Manual Setup
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (setupStatus === 'needs_manual_store_id') {
-    console.log('⚠️ Rendering manual store ID input screen...');
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <ExclamationTriangleIcon className="h-16 w-16 text-yellow-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Store ID Required</h2>
-          <p className="text-gray-600 mb-4">
-            We couldn't automatically detect your Ecwid store ID. Please enter it manually.
-          </p>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ecwid Store ID
-              </label>
-              <input
-                type="text"
-                value={manualStoreId}
-                onChange={(e) => setManualStoreId(e.target.value)}
-                placeholder="e.g., 124288251"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <button 
-              onClick={() => {
-                if (manualStoreId) {
-                  // Set the store ID and check setup
-                  setStoreIdManually(manualStoreId);
-                  // Trigger a re-check of store setup
-                  setTimeout(() => {
-                    checkStoreSetup();
-                  }, 100);
-                }
-              }}
-              disabled={!manualStoreId}
-              className="w-full btn btn-primary"
-            >
-              Continue with Store ID: {manualStoreId || '...'}
-            </button>
-            <p className="text-xs text-gray-500">
-              You can find your Store ID in your Ecwid admin panel URL: 
-              <br />
-              <code className="bg-gray-100 px-1 rounded">https://my.ecwid.com/store/YOUR_STORE_ID</code>
+        <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6">
+          <div className="text-center">
+            <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Setup Error</h2>
+            <p className="text-gray-600 mb-4">
+              {error || 'An error occurred during store setup.'}
             </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (setupStatus === 'needs_setup') {
-    console.log('🔧 Rendering store setup screen...');
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <CogIcon className="h-16 w-16 text-blue-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Store Setup</h2>
-          <p className="text-gray-600 mb-4">
-            We detected your store ID: <code className="bg-gray-100 px-2 py-1 rounded">{storeId}</code>
-          </p>
-          <p className="text-sm text-gray-500 mb-6">
-            Let's configure your store to get started with the plugin.
-          </p>
-          <div className="space-y-3">
-            <OAuthButton 
-              storeId={storeId}
-              onSuccess={(store) => {
-                setStoreInfo(store);
-                setSetupStatus('configured');
-                onSetupComplete(store);
-              }}
-              onError={(error) => {
-                setError(error);
-                setSetupStatus('error');
-              }}
-              className="w-full"
-            />
-            <button 
-              onClick={autoConfigureStore}
-              disabled={isConfiguring}
-              className="btn btn-outline w-full"
+            <button
+              onClick={() => window.location.reload()}
+              className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
             >
-              {isConfiguring ? (
-                <>
-                  <div className="spinner w-4 h-4 mr-2"></div>
-                  Configuring...
-                </>
-              ) : (
-                <>
-                  <CloudIcon className="h-5 w-5 mr-2" />
-                  Auto-Configure Store
-                </>
-              )}
-            </button>
-            <button 
-              onClick={handleManualSetup}
-              className="btn btn-outline w-full"
-            >
-              <CogIcon className="h-5 w-5 mr-2" />
-              Manual Configuration
+              Try Again
             </button>
           </div>
         </div>
@@ -350,7 +254,6 @@ const StoreSetup = ({ onSetupComplete }) => {
     );
   }
 
-  console.log('❌ StoreSetup: No matching setupStatus, returning null');
   return null;
 };
 

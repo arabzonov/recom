@@ -50,7 +50,6 @@ const OAuthButton = ({
       window.location.href = data.authUrl;
       
     } catch (error) {
-      console.error('OAuth initiation error:', error);
       onError?.(error.message || 'Failed to start OAuth flow');
       setIsLoading(false);
     }

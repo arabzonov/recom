@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { detectStoreId, detectStoreIdWithRetry, autoConfigureStore } from '../utils/storeDetection';
+import { detectStoreId, detectStoreIdWithRetry } from '../utils/storeDetection';
 
 const EcwidContext = createContext();
 
@@ -16,70 +16,45 @@ export const EcwidProvider = ({ children }) => {
   const [storeId, setStoreId] = useState(null);
   const [error, setError] = useState(null);
 
-  console.log('🏗️ EcwidProvider rendering with state:', { isLoaded, storeId, error });
-
   useEffect(() => {
-    console.log('🔄 EcwidProvider useEffect triggered');
-    
     const initializeStore = async () => {
-      console.log('🔍 Initializing store detection...');
-      console.log('🔍 Current localStorage state:', {
-        ecwid_store_id: localStorage.getItem('ecwid_store_id'),
-        ecwid_store_configured: localStorage.getItem('ecwid_store_configured'),
-        ecwid_store_config: localStorage.getItem('ecwid_store_config')
-      });
-      
-      // First try immediate detection
-      console.log('🔍 Calling detectStoreId()...');
-      let detectedStoreId = await detectStoreId();
-      console.log('🔍 detectStoreId() returned:', detectedStoreId);
-      
-      // If not found, try with retry mechanism to wait for Ecwid to load
-      if (!detectedStoreId) {
-        console.log('🔍 Store ID not found immediately, trying with retry mechanism...');
-        detectedStoreId = await detectStoreIdWithRetry(10, 500);
-        console.log('🔍 detectStoreIdWithRetry() returned:', detectedStoreId);
-      }
-      
-      if (detectedStoreId) {
-        console.log('✅ Store ID detected:', detectedStoreId);
-        setStoreId(detectedStoreId);
-        setIsLoaded(true);
-        setError(null);
-        console.log('✅ State updated: isLoaded=true, storeId=' + detectedStoreId);
-      } else {
-        // Check localStorage for manually set store ID
+      try {
+        // Check if store is already configured
         const storedStoreId = localStorage.getItem('ecwid_store_id');
-        console.log('🔍 Checking localStorage for storeId:', storedStoreId);
-        
         if (storedStoreId) {
-          console.log('✅ Store ID found in localStorage:', storedStoreId);
           setStoreId(storedStoreId);
           setIsLoaded(true);
-          setError(null);
-          console.log('✅ State updated: isLoaded=true, storeId=' + storedStoreId);
-        } else {
-          console.log('❌ No store ID found anywhere');
-          setIsLoaded(true);
-          setError('No store ID found. Please configure your store.');
-          console.log('✅ State updated: isLoaded=true, error set');
+          return;
         }
+
+        // Try to detect store ID
+        let detectedStoreId = await detectStoreId();
+        
+        if (!detectedStoreId) {
+          // If not found immediately, try with retry mechanism
+          detectedStoreId = await detectStoreIdWithRetry();
+        }
+
+        if (detectedStoreId) {
+          setStoreId(detectedStoreId);
+          setIsLoaded(true);
+        } else {
+          setError('Store ID not found');
+          setIsLoaded(true);
+        }
+      } catch (err) {
+        setError(err.message);
+        setIsLoaded(true);
       }
     };
 
-    console.log('🔄 Calling initializeStore...');
     initializeStore();
-    console.log('🔄 initializeStore completed');
   }, []);
 
-  console.log('🏗️ EcwidProvider about to render with final state:', { isLoaded, storeId, error });
-
-
   const trackEvent = (eventName, eventData = {}) => {
-    console.log('📊 trackEvent called:', { eventName, eventData, storeId });
-    // Analytics tracking removed - no longer storing analytics data
+    // Event tracking logic can be added here
+    // For now, just a placeholder
   };
-
 
   const value = {
     isLoaded,
@@ -87,8 +62,6 @@ export const EcwidProvider = ({ children }) => {
     error,
     trackEvent
   };
-
-  console.log('🏗️ EcwidProvider providing value:', value);
 
   return (
     <EcwidContext.Provider value={value}>

@@ -36,7 +36,6 @@ class RecommendationService extends BaseDataAccess {
       // Get the source product
       const sourceProduct = await this.getSourceProduct(storeId, productId);
       if (!sourceProduct) {
-        console.warn(`Source product not found: ${productId} in store ${storeId}`);
         return [];
       }
 
@@ -49,7 +48,6 @@ class RecommendationService extends BaseDataAccess {
       // Return combined recommendations for backward compatibility
       return [...recommendations.crossSell, ...recommendations.upsell];
     } catch (error) {
-      console.error(`Error generating upsell recommendations for product ${productId}:`, error);
       return [];
     }
   }
@@ -83,7 +81,6 @@ class RecommendationService extends BaseDataAccess {
     try {
       sourceCategories = sourceCategoryIds ? JSON.parse(sourceCategoryIds) : [];
     } catch (error) {
-      console.warn(`Failed to parse category_ids for product ${sourceProductId}:`, error.message);
     }
     
     let crossSellRecommendations = [];
@@ -159,7 +156,6 @@ class RecommendationService extends BaseDataAccess {
       }
     }
     
-    console.log(`Found ${crossSellRecommendations.length} cross-sell + ${upsellRecommendations.length} upsell recommendations for product ${sourceProductId} using: ${strategyUsed.join(', ')}`);
     return {
       crossSell: crossSellRecommendations,
       upsell: upsellRecommendations
@@ -202,7 +198,6 @@ class RecommendationService extends BaseDataAccess {
           }
         }
       } catch (error) {
-        console.warn(`Failed to parse order data for cross-sell analysis:`, error.message);
       }
     }
 
@@ -242,14 +237,6 @@ class RecommendationService extends BaseDataAccess {
     const allExclusions = [excludeProductId, ...excludeList];
     const exclusionConditions = allExclusions.map(() => 'ecwid_product_id != ?').join(' AND ');
 
-<<<<<<< HEAD
-=======
-    // Validate that we have proper conditions to prevent SQL injection
-    if (sourceCategories.length === 0) {
-      throw new Error('No source categories provided for cross-sell search');
-    }
-
->>>>>>> main
     const sql = `
       SELECT ecwid_product_id 
       FROM products 
@@ -298,14 +285,6 @@ class RecommendationService extends BaseDataAccess {
     const allExclusions = [excludeProductId, ...excludeList];
     const exclusionConditions = allExclusions.map(() => 'ecwid_product_id != ?').join(' AND ');
 
-<<<<<<< HEAD
-=======
-    // Validate that we have proper conditions to prevent SQL injection
-    if (sourceCategories.length === 0) {
-      throw new Error('No source categories provided for category search');
-    }
-
->>>>>>> main
     const sql = `
       SELECT ecwid_product_id 
       FROM products 
@@ -342,14 +321,6 @@ class RecommendationService extends BaseDataAccess {
     const allExclusions = [excludeProductId, ...excludeList];
     const exclusionConditions = allExclusions.map(() => 'ecwid_product_id != ?').join(' AND ');
 
-<<<<<<< HEAD
-=======
-    // Validate that we have proper conditions to prevent SQL injection
-    if (allExclusions.length === 0) {
-      throw new Error('No exclusion conditions provided for global search');
-    }
-
->>>>>>> main
     const sql = `
       SELECT ecwid_product_id 
       FROM products 
@@ -395,7 +366,6 @@ class RecommendationService extends BaseDataAccess {
    * @returns {Promise<Object>} Summary of recommendation generation
    */
   async generateAllRecommendations(storeId) {
-    console.log(`Starting recommendation generation for store ${storeId}`);
     
     // Get all products for the store
     const products = await this.query(
@@ -418,10 +388,8 @@ class RecommendationService extends BaseDataAccess {
         
         // Log progress every 10 products
         if (processed % 10 === 0) {
-          console.log(`Processed ${processed}/${products.length} products for store ${storeId}`);
         }
       } catch (error) {
-        console.error(`Error processing product ${product.ecwid_product_id}:`, error);
         errors++;
       }
     }
@@ -435,7 +403,6 @@ class RecommendationService extends BaseDataAccess {
       completionRate: products.length > 0 ? (successful / products.length * 100).toFixed(2) + '%' : '0%'
     };
 
-    console.log(`Recommendation generation completed for store ${storeId}:`, summary);
     return summary;
   }
 
@@ -447,7 +414,6 @@ class RecommendationService extends BaseDataAccess {
    */
   async getProductRecommendations(storeId, productId) {
     const product = await this.get(
-<<<<<<< HEAD
       'SELECT upsell_recommendations FROM products WHERE store_id = ? AND ecwid_product_id = ?',
       [storeId, productId]
     );
@@ -457,17 +423,6 @@ class RecommendationService extends BaseDataAccess {
     }
 
     const recommendationIds = JSON.parse(product.upsell_recommendations);
-=======
-      'SELECT upsells FROM products WHERE store_id = ? AND ecwid_product_id = ?',
-      [storeId, productId]
-    );
-
-    if (!product || !product.upsells) {
-      return [];
-    }
-
-    const recommendationIds = JSON.parse(product.upsells);
->>>>>>> main
     
     if (recommendationIds.length === 0) {
       return [];

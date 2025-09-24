@@ -1,5 +1,5 @@
 ---
-description:never commit to github unless explicitly asked
+description:never commit to github unless explicitly asked. Never download from git unless explicitly asked.
 globs:
 alwaysApply: true
 ---

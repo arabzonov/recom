@@ -45,7 +45,6 @@ class CategoryService extends BaseDataAccess {
             productAppearances[productId] = (productAppearances[productId] || 0) + 1;
           }
         } catch (error) {
-          console.warn(`Failed to parse product_ids for category analysis:`, error.message);
         }
       }
 
@@ -105,7 +104,6 @@ class CategoryService extends BaseDataAccess {
 
       return combined.slice(0, 3);
     } catch (error) {
-      console.error(`Error generating category recommendations for category ${categoryId}:`, error);
       return [];
     }
   }
@@ -189,7 +187,6 @@ class CategoryService extends BaseDataAccess {
    */
   async generateAllCategoryRecommendations(storeId) {
     try {
-      console.log(`Starting category recommendation generation for store ${storeId}`);
 
       // Get all unique categories from products
       const categoryResults = await this.query(`
@@ -207,7 +204,6 @@ class CategoryService extends BaseDataAccess {
           const categoryIds = JSON.parse(result.category_ids);
           categoryIds.forEach(id => categories.add(id.toString()));
         } catch (error) {
-          console.warn(`Failed to parse category_ids:`, error.message);
         }
       }
 
@@ -220,10 +216,8 @@ class CategoryService extends BaseDataAccess {
           const recommendations = await this.generateCategoryRecommendations(storeId, categoryId);
           await this.updateCategoryRecommendations(storeId, categoryId, recommendations);
           
-          console.log(`Generated ${recommendations.length} recommendations for category ${categoryId}: [${recommendations.join(', ')}]`);
           successful++;
         } catch (error) {
-          console.error(`Error generating recommendations for category ${categoryId}:`, error.message);
           errors++;
         }
         processed++;
@@ -231,7 +225,6 @@ class CategoryService extends BaseDataAccess {
 
       const completionRate = processed > 0 ? ((successful / processed) * 100).toFixed(2) + '%' : '0.00%';
 
-      console.log(`Category recommendation generation completed for store ${storeId}: ${successful}/${processed} categories (${completionRate} coverage)`);
 
       return {
         storeId,
@@ -242,7 +235,6 @@ class CategoryService extends BaseDataAccess {
         completionRate
       };
     } catch (error) {
-      console.error(`Error generating category recommendations for store ${storeId}:`, error);
       return {
         storeId,
         totalCategories: 0,
@@ -273,19 +265,8 @@ class CategoryService extends BaseDataAccess {
     try {
       return JSON.parse(result.recommended_products);
     } catch (error) {
-      console.warn(`Failed to parse recommended_products for category ${categoryId}:`, error.message);
       return [];
     }
-  }
-
-  /**
-   * Delete all categories for a specific store
-   * @param {string} storeId - Store ID
-   * @returns {Promise<number>} Number of deleted records
-   */
-  async deleteByStoreId(storeId) {
-    const result = await this.execute('DELETE FROM categories WHERE store_id = ?', [storeId]);
-    return result.changes;
   }
 }
 

@@ -32,41 +32,27 @@ class ProductService extends BaseDataAccess {
     const params = [storeId];
 
     if (orderBy) {
-<<<<<<< HEAD
-      sql += ` ORDER BY ${orderBy}`;
-    }
-    if (limit) {
-      sql += ` LIMIT ?`;
-      params.push(limit);
-    }
-    if (offset) {
-      sql += ` OFFSET ?`;
-      params.push(offset);
-=======
-      // Validate orderBy clause to prevent SQL injection
-      if (typeof orderBy !== 'string' || !/^[a-zA-Z_][a-zA-Z0-9_]*(\s+(ASC|DESC))?$/.test(orderBy.trim())) {
-        throw new Error('Invalid orderBy clause format. Use format: "column ASC" or "column DESC"');
+      // Validate ORDER BY clause to prevent SQL injection
+      if (typeof orderBy !== 'string' || !this.isValidOrderByClause(orderBy)) {
+        throw new Error('Invalid ORDER BY clause: must be a safe column name with optional ASC/DESC');
       }
       sql += ` ORDER BY ${orderBy}`;
     }
     if (limit) {
-      // Validate limit to prevent SQL injection
+      // Validate LIMIT to prevent SQL injection
       const limitNum = parseInt(limit);
       if (isNaN(limitNum) || limitNum < 0 || limitNum > 10000) {
-        throw new Error('Invalid limit value. Must be a number between 0 and 10000');
+        throw new Error('Invalid LIMIT: must be a number between 0 and 10000');
       }
-      sql += ` LIMIT ?`;
-      params.push(limitNum);
+      sql += ` LIMIT ${limitNum}`;
     }
     if (offset) {
-      // Validate offset to prevent SQL injection
+      // Validate OFFSET to prevent SQL injection
       const offsetNum = parseInt(offset);
       if (isNaN(offsetNum) || offsetNum < 0) {
-        throw new Error('Invalid offset value. Must be a non-negative number');
+        throw new Error('Invalid OFFSET: must be a non-negative number');
       }
-      sql += ` OFFSET ?`;
-      params.push(offsetNum);
->>>>>>> main
+      sql += ` OFFSET ${offsetNum}`;
     }
 
     return await this.query(sql, params);
@@ -82,16 +68,11 @@ class ProductService extends BaseDataAccess {
     const {
       storeId,
       ecwidProductId,
-<<<<<<< HEAD
-      price,
-      stock,
-=======
       name,
       price,
       stock,
       sku,
       imageUrl,
->>>>>>> main
       categoryIds
     } = productData;
 
@@ -104,13 +85,6 @@ class ProductService extends BaseDataAccess {
       // Update existing product
       await this.execute(`
         UPDATE products 
-<<<<<<< HEAD
-        SET price = ?, stock = ?, category_ids = ?
-        WHERE store_id = ? AND ecwid_product_id = ?
-      `, [
-        price,
-        stock,
-=======
         SET name = ?, price = ?, stock = ?, sku = ?, image_url = ?, category_ids = ?
         WHERE store_id = ? AND ecwid_product_id = ?
       `, [
@@ -119,7 +93,6 @@ class ProductService extends BaseDataAccess {
         stock,
         sku,
         imageUrl,
->>>>>>> main
         categoryIdsJson,
         storeId,
         ecwidProductId
@@ -136,15 +109,6 @@ class ProductService extends BaseDataAccess {
     } else {
       // Create new product
       await this.execute(`
-<<<<<<< HEAD
-        INSERT INTO products (store_id, ecwid_product_id, price, stock, category_ids)
-        VALUES (?, ?, ?, ?, ?)
-      `, [
-        storeId,
-        ecwidProductId,
-        price,
-        stock,
-=======
         INSERT INTO products (store_id, ecwid_product_id, name, price, stock, sku, image_url, category_ids)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?)
       `, [
@@ -155,7 +119,6 @@ class ProductService extends BaseDataAccess {
         stock,
         sku,
         imageUrl,
->>>>>>> main
         categoryIdsJson
       ]);
 
@@ -193,7 +156,6 @@ class ProductService extends BaseDataAccess {
         
         await this.createOrUpdate(productData, generateRecommendations);
       } catch (error) {
-        console.error(`Error processing product ${productData.ecwidProductId}:`, error.message);
         errors++;
       }
     }
@@ -235,23 +197,17 @@ class ProductService extends BaseDataAccess {
         const productData = {
           storeId,
           ecwidProductId: product.id.toString(),
-<<<<<<< HEAD
+          name: product.name,
           price: product.price,
           stock: product.stock,
-=======
-          name: product.name || 'Unnamed Product',
-          price: product.price,
-          stock: product.stock,
-          sku: product.sku || null,
-          imageUrl: product.imageUrl || null,
->>>>>>> main
+          sku: product.sku,
+          imageUrl: product.imageUrl,
           categoryIds: JSON.parse(product.categoryId || '[]')
         };
         
         await this.createOrUpdate(productData, false);
         created++;
       } catch (error) {
-        console.error(`Error processing product ${product.id}:`, error.message);
         errors++;
       }
     }

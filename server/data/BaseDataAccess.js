@@ -9,6 +9,38 @@ class BaseDataAccess {
   }
 
   /**
+   * Validate WHERE clause to prevent SQL injection
+   * @param {string} whereClause - WHERE clause to validate
+   * @returns {boolean} True if valid
+   */
+  isValidWhereClause(whereClause) {
+    // Only allow simple column comparisons with placeholders
+    const safePattern = /^[a-zA-Z_][a-zA-Z0-9_]*\s*(=|!=|>|<|>=|<=|LIKE|IN)\s*(\?|[a-zA-Z0-9_]+)$/i;
+    return safePattern.test(whereClause.trim());
+  }
+
+  /**
+   * Validate ORDER BY clause to prevent SQL injection
+   * @param {string} orderBy - ORDER BY clause to validate
+   * @returns {boolean} True if valid
+   */
+  isValidOrderByClause(orderBy) {
+    // Only allow column names with optional ASC/DESC
+    const safePattern = /^[a-zA-Z_][a-zA-Z0-9_]*(\s+(ASC|DESC))?$/i;
+    return safePattern.test(orderBy.trim());
+  }
+
+  /**
+   * Validate field names to prevent SQL injection
+   * @param {Array} fields - Field names to validate
+   * @returns {boolean} True if all fields are valid
+   */
+  isValidFieldNames(fields) {
+    const safePattern = /^[a-zA-Z_][a-zA-Z0-9_]*$/;
+    return fields.every(field => safePattern.test(field));
+  }
+
+  /**
    * Execute a raw SQL query
    * @param {string} sql - SQL query string
    * @param {Array} params - Query parameters
@@ -57,52 +89,38 @@ class BaseDataAccess {
     const params = [];
 
     if (options.where) {
-<<<<<<< HEAD
-=======
-      // Validate where clause to prevent SQL injection
-      if (typeof options.where !== 'string' || !/^[a-zA-Z_][a-zA-Z0-9_]*\s*[=<>!]+\s*\?$/.test(options.where.trim())) {
-        throw new Error('Invalid where clause format. Use format: "column = ?"');
+      // Validate WHERE clause to prevent SQL injection
+      if (typeof options.where !== 'string' || !this.isValidWhereClause(options.where)) {
+        throw new Error('Invalid WHERE clause: must be a safe SQL condition');
       }
->>>>>>> main
       sql += ` WHERE ${options.where}`;
       params.push(...options.params || []);
     }
 
     if (options.orderBy) {
-<<<<<<< HEAD
-=======
-      // Validate orderBy clause to prevent SQL injection
-      if (typeof options.orderBy !== 'string' || !/^[a-zA-Z_][a-zA-Z0-9_]*(\s+(ASC|DESC))?$/.test(options.orderBy.trim())) {
-        throw new Error('Invalid orderBy clause format. Use format: "column ASC" or "column DESC"');
+      // Validate ORDER BY clause to prevent SQL injection
+      if (typeof options.orderBy !== 'string' || !this.isValidOrderByClause(options.orderBy)) {
+        throw new Error('Invalid ORDER BY clause: must be a safe column name with optional ASC/DESC');
       }
->>>>>>> main
       sql += ` ORDER BY ${options.orderBy}`;
     }
 
     if (options.limit) {
-<<<<<<< HEAD
-      sql += ` LIMIT ${options.limit}`;
-    }
-
-    if (options.offset) {
-      sql += ` OFFSET ${options.offset}`;
-=======
-      // Validate limit to prevent SQL injection
+      // Validate LIMIT to prevent SQL injection
       const limit = parseInt(options.limit);
       if (isNaN(limit) || limit < 0 || limit > 10000) {
-        throw new Error('Invalid limit value. Must be a number between 0 and 10000');
+        throw new Error('Invalid LIMIT: must be a number between 0 and 10000');
       }
       sql += ` LIMIT ${limit}`;
     }
 
     if (options.offset) {
-      // Validate offset to prevent SQL injection
+      // Validate OFFSET to prevent SQL injection
       const offset = parseInt(options.offset);
       if (isNaN(offset) || offset < 0) {
-        throw new Error('Invalid offset value. Must be a non-negative number');
+        throw new Error('Invalid OFFSET: must be a non-negative number');
       }
       sql += ` OFFSET ${offset}`;
->>>>>>> main
     }
 
     return await this.query(sql, params);
@@ -116,6 +134,12 @@ class BaseDataAccess {
   async create(data) {
     const fields = Object.keys(data);
     const values = Object.values(data);
+    
+    // Validate field names to prevent SQL injection
+    if (!this.isValidFieldNames(fields)) {
+      throw new Error('Invalid field names: must contain only alphanumeric characters and underscores');
+    }
+    
     const placeholders = fields.map(() => '?').join(', ');
 
     const sql = `INSERT INTO ${this.tableName} (${fields.join(', ')}) VALUES (${placeholders})`;
@@ -136,6 +160,12 @@ class BaseDataAccess {
   async updateById(id, data) {
     const fields = Object.keys(data);
     const values = Object.values(data);
+    
+    // Validate field names to prevent SQL injection
+    if (!this.isValidFieldNames(fields)) {
+      throw new Error('Invalid field names: must contain only alphanumeric characters and underscores');
+    }
+    
     const setClause = fields.map(field => `${field} = ?`).join(', ');
 
     const sql = `UPDATE ${this.tableName} SET ${setClause} WHERE id = ?`;

@@ -1,112 +1,120 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { CheckCircleIcon, ExclamationTriangleIcon } from '@heroicons/react/24/outline';
 
-const OAuthCallback = () => {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
+const OAuthCallback = ({ onSuccess, onError }) => {
   const [status, setStatus] = useState('processing');
-  const [message, setMessage] = useState('Processing OAuth callback...');
+  const [message, setMessage] = useState('');
 
   useEffect(() => {
-    const handleCallback = async () => {
+    const handleOAuthCallback = async () => {
       try {
-        const code = searchParams.get('code');
-        const state = searchParams.get('state');
-        const error = searchParams.get('error');
-        const storeId = searchParams.get('store_id');
-
-        console.log('🔄 OAuth callback received:', { code, state, error, storeId });
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const state = urlParams.get('state');
+        const error = urlParams.get('error');
+        const storeId = urlParams.get('store_id');
 
         if (error) {
-          console.error('❌ OAuth error:', error);
           setStatus('error');
           setMessage(`OAuth error: ${error}`);
-          setTimeout(() => navigate('/settings?error=oauth_failed'), 2000);
+          if (onError) onError(error);
           return;
         }
 
         if (!code || !state || !storeId) {
-          console.error('❌ Missing required OAuth parameters');
           setStatus('error');
           setMessage('Missing required OAuth parameters');
-          setTimeout(() => navigate('/settings?error=oauth_invalid'), 2000);
+          if (onError) onError('Missing required OAuth parameters');
           return;
         }
 
-        // Redirect to server OAuth callback to process the authorization code
-        setMessage('Processing OAuth callback...');
-        
-        // Build the server callback URL with query parameters
-        const serverCallbackUrl = `/api/oauth/callback?code=${encodeURIComponent(code)}&state=${encodeURIComponent(state)}`;
-        
-        // Redirect to server callback - the server will handle the OAuth exchange and redirect back
-        window.location.href = serverCallbackUrl;
+        // Exchange code for access token
+        const response = await fetch('/api/oauth/callback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            code,
+            state,
+            storeId,
+          }),
+        });
 
+        const data = await response.json();
+
+        if (data.success) {
+          setStatus('success');
+          setMessage('Successfully connected to Ecwid!');
+          if (onSuccess) onSuccess(data.store);
+        } else {
+          setStatus('error');
+          setMessage(data.error || 'OAuth callback failed');
+          if (onError) onError(data.error || 'OAuth callback failed');
+        }
       } catch (error) {
-        console.error('❌ OAuth callback error:', error);
         setStatus('error');
-        setMessage(`Authentication failed: ${error.message}`);
-        setTimeout(() => navigate('/settings?error=oauth_callback_failed'), 3000);
+        setMessage('OAuth callback error');
+        if (onError) onError(error.message);
       }
     };
 
-    handleCallback();
-  }, [searchParams, navigate]);
+    handleOAuthCallback();
+  }, [onSuccess, onError]);
 
-  const getStatusIcon = () => {
-    switch (status) {
-      case 'success':
-        return '✅';
-      case 'error':
-        return '❌';
-      default:
-        return '⏳';
-    }
-  };
-
-  const getStatusColor = () => {
-    switch (status) {
-      case 'success':
-        return 'text-green-600';
-      case 'error':
-        return 'text-red-600';
-      default:
-        return 'text-blue-600';
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6 text-center">
-        <div className="mb-4">
-          <div className="text-4xl mb-2">{getStatusIcon()}</div>
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            OAuth Authentication
-          </h2>
-          <p className={`text-sm ${getStatusColor()}`}>
-            {message}
-          </p>
+  if (status === 'processing') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="spinner w-12 h-12 mx-auto mb-4"></div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">Processing OAuth</h2>
+          <p className="text-gray-600">Completing your connection to Ecwid...</p>
         </div>
-        
-        {status === 'processing' && (
-          <div className="flex justify-center">
-            <div className="spinner w-6 h-6"></div>
-          </div>
-        )}
-        
-        {status === 'error' && (
-          <div className="mt-4">
+      </div>
+    );
+  }
+
+  if (status === 'success') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6">
+          <div className="text-center">
+            <CheckCircleIcon className="h-12 w-12 text-green-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Success!</h2>
+            <p className="text-gray-600 mb-4">{message}</p>
             <button
-              onClick={() => navigate('/settings')}
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              onClick={() => window.close()}
+              className="bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700"
             >
-              Go to Settings
+              Close Window
             </button>
           </div>
-        )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-md p-6">
+          <div className="text-center">
+            <ExclamationTriangleIcon className="h-12 w-12 text-red-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-gray-900 mb-2">Error</h2>
+            <p className="text-gray-600 mb-4">{message}</p>
+            <button
+              onClick={() => window.close()}
+              className="bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700"
+            >
+              Close Window
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
 };
 
 export default OAuthCallback;
