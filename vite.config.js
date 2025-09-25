@@ -14,6 +14,7 @@ export default defineConfig({
     host: true,
     allowedHosts: [
       'vigorously-loving-pug.ngrok-free.app',
+      'ec.1nax.app',
       'localhost',
       '127.0.0.1'
     ],

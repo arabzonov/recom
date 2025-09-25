@@ -1,7 +1,9 @@
 import React from 'react';
 import { Bars3Icon, BellIcon, UserCircleIcon } from '@heroicons/react/24/outline';
+import logger from '../utils/logger';
 
 const Header = ({ sidebarOpen, setSidebarOpen }) => {
+  logger.componentLifecycle('Header', 'rendering');
   return (
     <header className="bg-white shadow-sm border-b border-gray-200">
       <div className="flex items-center justify-between px-4 sm:px-6 lg:px-8 h-16">

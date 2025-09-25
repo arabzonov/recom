@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 
 import ecwidRoutes from './routes/ecwid.js';
+import oauthRoutes from './routes/oauth.js';
 
 // Configure dotenv
 dotenv.config();
@@ -18,7 +19,7 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
-// Trust proxy for rate limiting and IP detection (required for ngrok/Render)
+// Trust proxy for rate limiting and IP detection
 app.set('trust proxy', 1);
 
 // Strict configuration validation - NO DEFAULTS
@@ -27,17 +28,15 @@ if (!PORT) {
   process.exit(1);
 }
 
-// Main Application Server - Development Mode Only
-
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://connect.facebook.net", "https://www.googletagmanager.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://connect.facebook.net", "https://www.googletagmanager.com", "https://app.ecwid.com"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https://*.ecwid.com", "https://images-cdn.ecwid.com"],
-      connectSrc: ["'self'", "https://*.ecwid.com", "https://vigorously-loving-pug.ngrok-free.app"],
+      connectSrc: ["'self'", "https://*.ecwid.com"],
       frameSrc: ["'self'", "https://app.ecwid.com"],
     },
   },
@@ -69,8 +68,8 @@ const limiter = rateLimit({
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,
-  // Trust proxy is already set above, so this will work correctly
 });
+
 app.use('/api/', limiter);
 
 // CORS configuration - NO DEFAULTS
@@ -101,42 +100,7 @@ app.use(express.static(path.join(__dirname, '../dist')));
 
 // API Routes
 app.use('/api/ecwid', ecwidRoutes);
-
-// Redirect route for ec.1nax.app to preserve Ecwid context
-app.get('/redirect', (req, res) => {
-  const targetUrl = 'https://vigorously-loving-pug.ngrok-free.app/';
-  
-  // Preserve all query parameters
-  const searchParams = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
-  
-  // Build the final URL
-  const finalUrl = targetUrl + searchParams;
-  
-  
-  // Perform the redirect
-  res.redirect(302, finalUrl);
-});
-
-// Root redirect for ec.1nax.app (when accessed directly)
-app.get('/', (req, res) => {
-  // Check if this is a request from Ecwid (has payload parameter)
-  if (req.query.payload || req.query.lang) {
-    const targetUrl = 'https://vigorously-loving-pug.ngrok-free.app/';
-    
-    // Preserve all query parameters
-    const searchParams = req.url.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
-    
-    // Build the final URL
-    const finalUrl = targetUrl + searchParams;
-    
-    
-    // Perform the redirect
-    res.redirect(302, finalUrl);
-  } else {
-    // For other requests, serve the normal React app
-    res.sendFile(path.join(__dirname, '../dist/index.html'));
-  }
-});
+app.use('/api/oauth', oauthRoutes);
 
 // Health check endpoint - NO DEFAULTS
 const APP_VERSION = process.env.APP_VERSION;

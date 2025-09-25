@@ -11,11 +11,11 @@
     "build": "npm run client:build",
     "client:build": "vite build",
     "start": "node server/index.js",
-    "start:redirect": "node redirect-server.js",
-    "start:production": "npm run start:redirect",
+    "start:production": "node server/index.js",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
-    "sync:all": "node scripts/background/sync-all-stores.js"
+    "sync:all": "node scripts/background/sync-all-stores.js",
+    "update:ecwid-id": "node scripts/update-ecwid-app-id.js"
   },
   "keywords": [
     "ecwid",

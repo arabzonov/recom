@@ -12,11 +12,22 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
+    <!-- Ecwid SDK -->
+    <script src="https://djqizrxa6f10j.cloudfront.net/ecwid-sdk/js/1.3.0/ecwid-app.js"></script>
+    <script>
+      // Initialize Ecwid App
+      // Note: Replace 'your-app-client-id' with your actual Ecwid app client_id
+      // You can get this from your Ecwid Developer account
+      EcwidApp.init({
+        app_id: "1faq-dev", // Replace with your actual client_id from Ecwid Developer Console
+        autoloadedflag: true,         // Set to true if you want Ecwid to detect when your app is loaded
+        autoheight: true              // Set to true if you want Ecwid to automatically adjust the iframe height
+      });
+    </script>
+    
   </head>
   <body>
     <div id="root"></div>
-    <script>
-    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

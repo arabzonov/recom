@@ -4,6 +4,7 @@ import {
   CogIcon,
   XMarkIcon
 } from '@heroicons/react/24/outline';
+import logger from '../utils/logger';
 
 const navigation = [
   { name: 'Settings', href: '/settings', icon: CogIcon },
@@ -11,6 +12,7 @@ const navigation = [
 
 const Sidebar = ({ sidebarOpen, setSidebarOpen }) => {
   const location = useLocation();
+  logger.componentLifecycle('Sidebar', 'rendering');
 
   return (
     <>

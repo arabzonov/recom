@@ -1,3 +1,5 @@
+import logger from './logger.js';
+
 /**
  * Store Detection Utility
  * Detects the Ecwid store ID from various sources
@@ -5,12 +7,19 @@
 
 export const detectStoreId = async () => {
   let storeId = null;
+  
+  logger.debug('Starting store ID detection', {
+    url: window.location.href,
+    searchParams: window.location.search
+  });
 
   // ALWAYS process payload first to save access token to database
   const urlParams = new URLSearchParams(window.location.search);
   const payload = urlParams.get('payload');
+  
   if (payload) {
     try {
+      logger.info('Processing Ecwid payload');
       const response = await fetch('/api/ecwid/decode-payload', {
         method: 'POST',
         headers: {
@@ -24,10 +33,16 @@ export const detectStoreId = async () => {
         if (result.success && result.data.store_id) {
           storeId = result.data.store_id;
           localStorage.setItem('ecwid_store_id', storeId);
+          logger.storeDetection('payload', storeId);
+          
+          
           return storeId;
         }
+      } else {
+        logger.warn('Payload processing failed', { status: response.status });
       }
     } catch (error) {
+      logger.error('Payload processing error', error);
       // Continue to other methods if payload processing fails
     }
   }
@@ -39,9 +54,11 @@ export const detectStoreId = async () => {
         storeId = window.Ecwid.getOwnerId();
         if (storeId) {
           localStorage.setItem('ecwid_store_id', storeId);
+          logger.storeDetection('Ecwid.getOwnerId()', storeId);
           return storeId;
         }
       } catch (e) {
+        logger.warn('Ecwid.getOwnerId() error', e);
         // Continue to other methods
       }
     }
@@ -51,6 +68,7 @@ export const detectStoreId = async () => {
   if (window.ecwid_store_id) {
     storeId = window.ecwid_store_id;
     localStorage.setItem('ecwid_store_id', storeId);
+    logger.storeDetection('window.ecwid_store_id', storeId);
     return storeId;
   }
 
@@ -60,6 +78,7 @@ export const detectStoreId = async () => {
     if (match && match[1]) {
       storeId = match[1];
       localStorage.setItem('ecwid_store_id', storeId);
+      logger.storeDetection('window.ec.config.storefrontUrls.cleanStoreUrl', storeId);
       return storeId;
     }
   }
@@ -67,6 +86,7 @@ export const detectStoreId = async () => {
   // Method 4: From localStorage (fallback)
   storeId = localStorage.getItem('ecwid_store_id');
   if (storeId) {
+    logger.storeDetection('localStorage', storeId);
     return storeId;
   }
 
@@ -75,6 +95,7 @@ export const detectStoreId = async () => {
   storeId = urlParamsFallback.get('storeId') || urlParamsFallback.get('ecwid_store_id') || urlParamsFallback.get('store_id');
   if (storeId) {
     localStorage.setItem('ecwid_store_id', storeId);
+    logger.storeDetection('URL parameters', storeId);
     return storeId;
   }
 
@@ -86,6 +107,7 @@ export const detectStoreId = async () => {
     if (hashStoreIdMatch && hashStoreIdMatch[1]) {
       storeId = hashStoreIdMatch[1];
       localStorage.setItem('ecwid_store_id', storeId);
+      logger.storeDetection('URL hash', storeId);
       return storeId;
     }
   }
@@ -96,6 +118,7 @@ export const detectStoreId = async () => {
   if (urlPathMatch && urlPathMatch[1]) {
     storeId = urlPathMatch[1];
     localStorage.setItem('ecwid_store_id', storeId);
+    logger.storeDetection('URL path', storeId);
     return storeId;
   }
 
@@ -105,10 +128,12 @@ export const detectStoreId = async () => {
     if (referrerMatch && referrerMatch[1]) {
       storeId = referrerMatch[1];
       localStorage.setItem('ecwid_store_id', storeId);
+      logger.storeDetection('referrer URL', storeId);
       return storeId;
     }
   }
 
+  logger.warn('No store ID found using any detection method');
   return null;
 };
 

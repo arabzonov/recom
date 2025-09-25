@@ -32,8 +32,8 @@ class StoreService extends BaseDataAccess {
       // Update existing store
       const updateData = {
         store_name: storeName || existingStore.store_name,
-        access_token: accessToken || existingStore.access_token,
-        refresh_token: refreshToken || existingStore.refresh_token,
+        access_token: accessToken !== undefined ? accessToken : existingStore.access_token,
+        refresh_token: refreshToken !== undefined ? refreshToken : existingStore.refresh_token,
         scopes: scopes || existingStore.scopes
       };
 

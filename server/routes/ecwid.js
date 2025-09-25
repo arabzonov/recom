@@ -21,8 +21,11 @@ router.post('/decode-payload', async (req, res) => {
       return res.status(400).json({ error: 'Payload is required' });
     }
     
+    console.log('Received payload:', payload.substring(0, 50) + '...');
+    
     // Decode payload using service
     const payloadData = PayloadService.decodePayload(payload);
+    console.log('Decoded payload data:', payloadData);
 
     // Save store configuration to database
     try {
@@ -43,10 +46,15 @@ router.post('/decode-payload', async (req, res) => {
         }
       });
     } catch (dbError) {
-      res.status(500).json({ error: 'Failed to save store configuration' });
+      console.error('Database error:', dbError);
+      res.status(500).json({ error: 'Failed to save store configuration', details: dbError.message });
     }
   } catch (error) {
-    res.status(400).json({ error: 'Invalid payload format' });
+    console.error('Payload decoding error:', error);
+    res.status(400).json({ 
+      error: 'Invalid payload format',
+      details: error.message 
+    });
   }
 });
 
