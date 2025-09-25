@@ -18,12 +18,17 @@ class StoreService extends BaseDataAccess {
   }
 
   /**
-   * Create or update store
+   * Create or update store (only with access token)
    * @param {Object} storeData - Store data
    * @returns {Promise<Object>} Store record
    */
   async createOrUpdate(storeData) {
     const { storeId, storeName, accessToken, refreshToken, scopes } = storeData;
+
+    // Require access token for store creation/update
+    if (!accessToken) {
+      throw new Error('Access token is required for store creation/update');
+    }
 
     // Check if store already exists
     const existingStore = await this.findByStoreId(storeId);
@@ -32,8 +37,8 @@ class StoreService extends BaseDataAccess {
       // Update existing store
       const updateData = {
         store_name: storeName || existingStore.store_name,
-        access_token: accessToken !== undefined ? accessToken : existingStore.access_token,
-        refresh_token: refreshToken !== undefined ? refreshToken : existingStore.refresh_token,
+        access_token: accessToken,
+        refresh_token: refreshToken || existingStore.refresh_token,
         scopes: scopes || existingStore.scopes
       };
 
@@ -57,8 +62,8 @@ class StoreService extends BaseDataAccess {
         VALUES (?, ?, ?, ?, ?)
       `, [
         storeId,
-        storeName || 'Ecwid Store',
-        accessToken || null,
+        storeName,
+        accessToken,
         refreshToken || null,
         scopes || null
       ]);
@@ -106,6 +111,36 @@ class StoreService extends BaseDataAccess {
   async isAuthenticated(storeId) {
     const store = await this.findByStoreId(storeId);
     return store && store.access_token;
+  }
+
+  /**
+   * Get recommendation settings for a store
+   * @param {string} storeId - Store ID
+   * @returns {Promise<Object|null>} Settings object or null if not found
+   */
+  async getRecommendationSettings(storeId) {
+    const store = await this.findByStoreId(storeId);
+    
+    if (store && store.recommendation_settings) {
+      return JSON.parse(store.recommendation_settings);
+    }
+    
+    return null;
+  }
+
+  /**
+   * Update recommendation settings for a store
+   * @param {string} storeId - Store ID
+   * @param {Object} settings - Recommendation settings
+   * @returns {Promise<Object>} Update result
+   */
+  async updateRecommendationSettings(storeId, settings) {
+    const settingsJson = JSON.stringify(settings);
+    return await this.execute(`
+      UPDATE stores 
+      SET recommendation_settings = ?
+      WHERE store_id = ?
+    `, [settingsJson, storeId]);
   }
 
 }

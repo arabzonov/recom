@@ -73,10 +73,13 @@ class ProductService extends BaseDataAccess {
       stock,
       sku,
       imageUrl,
-      categoryIds
+      categoryIds,
+      productUrl,
+      options
     } = productData;
 
     const categoryIdsJson = JSON.stringify(categoryIds || []);
+    const optionsJson = options || '[]';
 
     // Check if product already exists
     const existingProduct = await this.findByStoreAndEcwidId(storeId, ecwidProductId);
@@ -85,7 +88,7 @@ class ProductService extends BaseDataAccess {
       // Update existing product
       await this.execute(`
         UPDATE products 
-        SET name = ?, price = ?, stock = ?, sku = ?, image_url = ?, category_ids = ?
+        SET name = ?, price = ?, stock = ?, sku = ?, image_url = ?, category_ids = ?, product_url = ?, options = ?
         WHERE store_id = ? AND ecwid_product_id = ?
       `, [
         name,
@@ -94,6 +97,8 @@ class ProductService extends BaseDataAccess {
         sku,
         imageUrl,
         categoryIdsJson,
+        productUrl,
+        optionsJson,
         storeId,
         ecwidProductId
       ]);
@@ -109,8 +114,8 @@ class ProductService extends BaseDataAccess {
     } else {
       // Create new product
       await this.execute(`
-        INSERT INTO products (store_id, ecwid_product_id, name, price, stock, sku, image_url, category_ids)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO products (store_id, ecwid_product_id, name, price, stock, sku, image_url, category_ids, product_url, options)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         storeId,
         ecwidProductId,
@@ -119,7 +124,9 @@ class ProductService extends BaseDataAccess {
         stock,
         sku,
         imageUrl,
-        categoryIdsJson
+        categoryIdsJson,
+        productUrl,
+        optionsJson
       ]);
 
       const newProduct = await this.findByStoreAndEcwidId(storeId, ecwidProductId);
@@ -202,7 +209,9 @@ class ProductService extends BaseDataAccess {
           stock: product.stock,
           sku: product.sku,
           imageUrl: product.imageUrl,
-          categoryIds: JSON.parse(product.categoryId || '[]')
+          categoryIds: JSON.parse(product.categoryId || '[]'),
+          productUrl: product.productUrl,
+          options: product.options
         };
         
         await this.createOrUpdate(productData, false);

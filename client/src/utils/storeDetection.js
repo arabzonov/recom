@@ -2,7 +2,7 @@ import logger from './logger.js';
 
 /**
  * Store Detection Utility
- * Detects the Ecwid store ID from various sources
+ * Detects the Ecwid store ID using proper SDK methods
  */
 
 export const detectStoreId = async () => {
@@ -34,8 +34,6 @@ export const detectStoreId = async () => {
           storeId = result.data.store_id;
           localStorage.setItem('ecwid_store_id', storeId);
           logger.storeDetection('payload', storeId);
-          
-          
           return storeId;
         }
       } else {
@@ -47,24 +45,49 @@ export const detectStoreId = async () => {
     }
   }
 
-  // Method 1: From Ecwid global object (the official way)
-  if (window.Ecwid) {
-    if (typeof window.Ecwid.getOwnerId === 'function') {
-      try {
-        storeId = window.Ecwid.getOwnerId();
-        if (storeId) {
-          localStorage.setItem('ecwid_store_id', storeId);
-          logger.storeDetection('Ecwid.getOwnerId()', storeId);
-          return storeId;
-        }
-      } catch (e) {
-        logger.warn('Ecwid.getOwnerId() error', e);
-        // Continue to other methods
+  // Method 1: From Ecwid SDK (the official way for storefront)
+  if (window.Ecwid && window.Ecwid.getStoreId) {
+    try {
+      storeId = window.Ecwid.getStoreId();
+      if (storeId) {
+        localStorage.setItem('ecwid_store_id', storeId);
+        logger.storeDetection('Ecwid.getStoreId()', storeId);
+        return storeId;
       }
+    } catch (e) {
+      logger.warn('Ecwid.getStoreId() error', e);
     }
   }
 
-  // Method 2: From window.ecwid_store_id (common fallback)
+  // Method 2: From EcwidApp SDK (for admin iframe context)
+  if (window.EcwidApp && window.EcwidApp.getSettings) {
+    try {
+      // This is async, so we need to handle it properly
+      return new Promise((resolve) => {
+        window.EcwidApp.getSettings((settings) => {
+          if (settings && settings.storeId) {
+            storeId = settings.storeId;
+            localStorage.setItem('ecwid_store_id', storeId);
+            logger.storeDetection('EcwidApp.getSettings()', storeId);
+            resolve(storeId);
+          } else {
+            resolve(null);
+          }
+        });
+      });
+    } catch (e) {
+      logger.warn('EcwidApp.getSettings() error', e);
+    }
+  }
+
+  // Method 3: From localStorage (fallback for already configured stores)
+  storeId = localStorage.getItem('ecwid_store_id');
+  if (storeId) {
+    logger.storeDetection('localStorage', storeId);
+    return storeId;
+  }
+
+  // Method 4: From window.ecwid_store_id (legacy fallback)
   if (window.ecwid_store_id) {
     storeId = window.ecwid_store_id;
     localStorage.setItem('ecwid_store_id', storeId);
@@ -72,68 +95,7 @@ export const detectStoreId = async () => {
     return storeId;
   }
 
-  // Method 3: From window.ec.config.storefrontUrls.cleanStoreUrl (another fallback)
-  if (window.ec && window.ec.config && window.ec.config.storefrontUrls && window.ec.config.storefrontUrls.cleanStoreUrl) {
-    const match = window.ec.config.storefrontUrls.cleanStoreUrl.match(/store\/(\d+)/);
-    if (match && match[1]) {
-      storeId = match[1];
-      localStorage.setItem('ecwid_store_id', storeId);
-      logger.storeDetection('window.ec.config.storefrontUrls.cleanStoreUrl', storeId);
-      return storeId;
-    }
-  }
-
-  // Method 4: From localStorage (fallback)
-  storeId = localStorage.getItem('ecwid_store_id');
-  if (storeId) {
-    logger.storeDetection('localStorage', storeId);
-    return storeId;
-  }
-
-  // Method 5: From URL parameters (fallback for development)
-  const urlParamsFallback = new URLSearchParams(window.location.search);
-  storeId = urlParamsFallback.get('storeId') || urlParamsFallback.get('ecwid_store_id') || urlParamsFallback.get('store_id');
-  if (storeId) {
-    localStorage.setItem('ecwid_store_id', storeId);
-    logger.storeDetection('URL parameters', storeId);
-    return storeId;
-  }
-
-  // Method 6: From URL hash (fallback for development)
-  const hash = window.location.hash;
-  if (hash) {
-    // Try to extract store ID from hash like 124288251#app:name=1faq-dev:1
-    const hashStoreIdMatch = hash.match(/^#?(\d+)/);
-    if (hashStoreIdMatch && hashStoreIdMatch[1]) {
-      storeId = hashStoreIdMatch[1];
-      localStorage.setItem('ecwid_store_id', storeId);
-      logger.storeDetection('URL hash', storeId);
-      return storeId;
-    }
-  }
-
-  // Method 7: From URL path (fallback for development)
-  const currentUrl = window.location.href;
-  const urlPathMatch = currentUrl.match(/\/store\/(\d+)/);
-  if (urlPathMatch && urlPathMatch[1]) {
-    storeId = urlPathMatch[1];
-    localStorage.setItem('ecwid_store_id', storeId);
-    logger.storeDetection('URL path', storeId);
-    return storeId;
-  }
-
-  // Method 8: From referrer URL (fallback)
-  if (document.referrer) {
-    const referrerMatch = document.referrer.match(/\/store\/(\d+)/);
-    if (referrerMatch && referrerMatch[1]) {
-      storeId = referrerMatch[1];
-      localStorage.setItem('ecwid_store_id', storeId);
-      logger.storeDetection('referrer URL', storeId);
-      return storeId;
-    }
-  }
-
-  logger.warn('No store ID found using any detection method');
+  logger.warn('No store ID found using proper SDK methods');
   return null;
 };
 

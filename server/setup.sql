@@ -6,7 +6,6 @@
 PRAGMA foreign_keys = OFF;
 
 -- Drop existing tables if they exist (for clean setup)
-DROP TABLE IF EXISTS plugin_settings;
 DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS products;
@@ -20,7 +19,7 @@ CREATE TABLE stores (
   access_token TEXT,
   refresh_token TEXT,
   scopes TEXT,
-  webhook_secret TEXT
+  recommendation_settings TEXT DEFAULT '{}'
 );
 
 -- Create products table
@@ -31,8 +30,9 @@ CREATE TABLE products (
   name TEXT NOT NULL,
   price REAL,
   sku TEXT,
-  stock INTEGER DEFAULT 0,
   image_url TEXT,
+  options TEXT DEFAULT '{}',
+  product_url TEXT,
   category_ids TEXT DEFAULT '[]',
   cross_sells TEXT DEFAULT '[]',
   upsells TEXT DEFAULT '[]',
@@ -61,29 +61,15 @@ CREATE TABLE categories (
   UNIQUE(store_id, category_id)
 );
 
--- Create plugin_settings table
-CREATE TABLE plugin_settings (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  store_id TEXT NOT NULL,
-  setting_key TEXT NOT NULL,
-  setting_value TEXT,
-  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (store_id) REFERENCES stores (store_id),
-  UNIQUE(store_id, setting_key)
-);
 
 -- Create indexes for better performance
 CREATE INDEX idx_products_store_id ON products(store_id);
 CREATE INDEX idx_products_ecwid_id ON products(ecwid_product_id);
-CREATE INDEX idx_products_stock ON products(stock);
 CREATE INDEX idx_products_price ON products(price);
 CREATE INDEX idx_orders_store_id ON orders(store_id);
 CREATE INDEX idx_orders_ecwid_id ON orders(ecwid_order_id);
 CREATE INDEX idx_categories_store_id ON categories(store_id);
 CREATE INDEX idx_categories_category_id ON categories(category_id);
-CREATE INDEX idx_plugin_settings_store_id ON plugin_settings(store_id);
-CREATE INDEX idx_plugin_settings_key ON plugin_settings(setting_key);
 
 -- Re-enable foreign key constraints
 PRAGMA foreign_keys = ON;

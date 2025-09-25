@@ -125,21 +125,21 @@ async function storeProducts(storeId, products) {
     // DELETE: Remove all existing products for this store
     const deleteResult = await productService.deleteByStoreId(storeId);
     
-    // Process products to calculate minimum prices from variants and filter enabled products with quantity > 0
+    // Process products to calculate minimum prices from variants and filter enabled products
     const processedProducts = products
       .map(product => {
         // Calculate minimum price from variants if they exist
-        let minPrice = product.price || 0;
+        let minPrice = product.price;
         if (product.combinations && product.combinations.length > 0) {
           const variantPrices = product.combinations
-            .map(combo => combo.price || 0)
+            .map(combo => combo.price)
             .filter(price => price > 0);
           if (variantPrices.length > 0) {
             minPrice = Math.min(...variantPrices);
           }
         }
 
-        // Calculate total stock
+        // Calculate total stock - do not record stock for products
         let totalStock = 0;
         if (product.unlimited) {
           totalStock = 999;
@@ -156,16 +156,36 @@ async function storeProducts(storeId, products) {
           }
         }
 
-        
+        // If main stock is 0, check all options stocks and sum them up
+        if (totalStock === 0 && product.options && product.options.length > 0) {
+          totalStock = product.options.reduce((sum, option) => {
+            return sum + option.quantityInStock;
+          }, 0);
+        }
+
+        // Process options as JSON array containing option name, price and stock
+        const optionsArray = [];
+        if (product.options && product.options.length > 0) {
+          product.options.forEach(option => {
+            optionsArray.push({
+              name: option.name,
+              price: option.priceModifier,
+              stock: option.quantityInStock
+            });
+          });
+        }
+
         return {
           id: product.id,
-          name: product.name || `Product ${product.id}`,
+          name: product.name,
           price: minPrice,
           stock: totalStock,
-          categoryId: product.categoryIds ? JSON.stringify(product.categoryIds) : '[]',
+          categoryId: JSON.stringify(product.categoryIds),
           enabled: product.enabled,
-          sku: product.sku || null,
-          imageUrl: product.thumbnailUrl || null
+          sku: product.sku,
+          imageUrl: product.thumbnailUrl,
+          productUrl: product.url,
+          options: JSON.stringify(optionsArray)
         };
       })
       .filter(product => {

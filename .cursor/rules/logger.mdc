@@ -1,0 +1,5 @@
+---
+description: never use console.log, use the lgger engine instead
+globs:
+alwaysApply: true
+---

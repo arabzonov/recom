@@ -1,5 +1,0 @@
----
-description:never create documentation files unless asked
-globs:
-alwaysApply: true
----

@@ -414,15 +414,15 @@ class RecommendationService extends BaseDataAccess {
    */
   async getProductRecommendations(storeId, productId) {
     const product = await this.get(
-      'SELECT upsell_recommendations FROM products WHERE store_id = ? AND ecwid_product_id = ?',
+      'SELECT upsells FROM products WHERE store_id = ? AND ecwid_product_id = ?',
       [storeId, productId]
     );
 
-    if (!product || !product.upsell_recommendations) {
+    if (!product || !product.upsells) {
       return [];
     }
 
-    const recommendationIds = JSON.parse(product.upsell_recommendations);
+    const recommendationIds = JSON.parse(product.upsells);
     
     if (recommendationIds.length === 0) {
       return [];

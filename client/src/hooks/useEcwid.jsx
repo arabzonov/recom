@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { detectStoreId, detectStoreIdWithRetry } from '../utils/storeDetection';
+import { getStoreId, waitForEcwidAPI } from '../utils/ecwidSDK';
 import logger from '../utils/logger';
 
 const EcwidContext = createContext();
@@ -35,7 +36,22 @@ export const EcwidProvider = ({ children }) => {
         }
 
         logger.info('No stored store ID, detecting...');
-        // Try to detect store ID
+        
+        // First try proper SDK method
+        try {
+          await waitForEcwidAPI();
+          const sdkStoreId = await getStoreId();
+          if (sdkStoreId) {
+            logger.info('Store ID found using SDK', { storeId: sdkStoreId });
+            setStoreId(sdkStoreId);
+            localStorage.setItem('ecwid_store_id', sdkStoreId);
+            return;
+          }
+        } catch (error) {
+          logger.warn('SDK method failed, trying fallback methods', error);
+        }
+        
+        // Fallback to legacy detection methods
         let detectedStoreId = await detectStoreId();
         
         if (!detectedStoreId) {

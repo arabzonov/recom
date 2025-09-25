@@ -5,6 +5,7 @@ import StoreSetup from './components/StoreSetup';
 import Settings from './pages/Settings';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
+import RecommendationSettings from './components/RecommendationSettings';
 import logger from './utils/logger';
 
 const AppContent = () => {
@@ -72,10 +73,14 @@ const AppContent = () => {
             </div>
           </div>
           <main className="flex-1 p-6">
-            <div className="bg-white rounded-lg shadow p-6">
-              <h1 className="text-2xl font-bold text-gray-900 mb-4">Dashboard</h1>
-              <p className="text-gray-600">Welcome to your Ecwid Plugin Dashboard!</p>
-              <p className="text-sm text-gray-500 mt-2">Store ID: {storeId}</p>
+            <div className="space-y-6">
+              <div className="bg-white rounded-lg shadow p-6">
+                <h1 className="text-2xl font-bold text-gray-900 mb-4">Dashboard</h1>
+                <p className="text-gray-600">Welcome to your Ecwid Plugin Dashboard!</p>
+                <p className="text-sm text-gray-500 mt-2">Store ID: {storeId}</p>
+              </div>
+              
+              <RecommendationSettings />
             </div>
           </main>
         </div>

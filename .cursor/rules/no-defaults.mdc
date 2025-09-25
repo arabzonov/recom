@@ -1,5 +1,5 @@
 ---
-description:never default or fallback app name, app url and other app settings. I edit .env and you don't have access to it. Just tell me to edit .env when necessary.
+description:never default or fallback app name, app url, any config values, .env parameters and other app settings. I edit .env and you don't have access to it. Just tell me to edit .env when necessary.
 globs:
 alwaysApply: true
 ---

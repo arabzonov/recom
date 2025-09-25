@@ -7,11 +7,11 @@
   "scripts": {
     "dev": "concurrently \"npm run server:dev\" \"npm run client:dev\"",
     "server:dev": "nodemon server/index.js",
-    "client:dev": "vite",
+    "client:dev": "vite --host 0.0.0.0",
     "build": "npm run client:build",
     "client:build": "vite build",
     "start": "node server/index.js",
-    "start:production": "node server/index.js",
+    "start:production": "NODE_ENV=production node server/index.js",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "sync:all": "node scripts/background/sync-all-stores.js",

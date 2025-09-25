@@ -65,9 +65,9 @@ const getStoreCredentials = async (req, res, next) => {
     const store = await storeService.findByStoreId(storeId);
     
     if (!store) {
-      return res.status(404).json({ 
+      return res.status(401).json({ 
         success: false, 
-        error: 'Store not found' 
+        error: 'Store not authenticated. Please complete OAuth setup first.' 
       });
     }
     

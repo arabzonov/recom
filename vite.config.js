@@ -13,15 +13,33 @@ export default defineConfig({
     port: 3000,
     host: true,
     allowedHosts: [
-      'vigorously-loving-pug.ngrok-free.app',
       'ec.1nax.app',
       'localhost',
       '127.0.0.1'
     ],
+    cors: {
+      origin: '*',
+      methods: ['GET', 'POST', 'OPTIONS'],
+      allowedHeaders: ['Content-Type', 'Authorization']
+    },
     proxy: {
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
+        configure: (proxy, options) => {
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            // Forward all headers including CORS headers
+            if (req.headers.origin) {
+              proxyReq.setHeader('Origin', req.headers.origin);
+            }
+            if (req.headers['access-control-request-method']) {
+              proxyReq.setHeader('Access-Control-Request-Method', req.headers['access-control-request-method']);
+            }
+            if (req.headers['access-control-request-headers']) {
+              proxyReq.setHeader('Access-Control-Request-Headers', req.headers['access-control-request-headers']);
+            }
+          });
+        }
       },
     },
   },
