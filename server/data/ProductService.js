@@ -217,6 +217,10 @@ class ProductService extends BaseDataAccess {
         await this.createOrUpdate(productData, false);
         created++;
       } catch (error) {
+        console.error(`❌ Error inserting product ${product.id} for store ${storeId}:`, error.message);
+        if (error.stack) {
+          console.error(`❌ Stack trace:`, error.stack);
+        }
         errors++;
       }
     }

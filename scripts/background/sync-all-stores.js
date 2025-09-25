@@ -43,9 +43,14 @@ async function fetchStoreProducts(store) {
   const allProducts = [];
   let offset = 0;
   const limit = 100;
+  let pageCount = 0;
+  const startTime = Date.now();
+
+  console.log(`📦 Fetching products for store ${store.store_id}...`);
 
   while (true) {
     try {
+      pageCount++;
       const response = await axios.get(`${ECWID_API_BASE}/${store.store_id}/products`, {
         headers: {
           'Authorization': `Bearer ${store.access_token}`
@@ -59,17 +64,24 @@ async function fetchStoreProducts(store) {
       const products = response.data.items || [];
       allProducts.push(...products);
 
+      console.log(`📦 Store ${store.store_id}: Fetched page ${pageCount} (${products.length} products)`);
+
       if (products.length < limit) {
         break;
       }
 
       offset += limit;
     } catch (error) {
-      console.error(`❌ Error fetching products for store ${store.store_id}:`, error.message);
+      console.error(`❌ Error fetching products for store ${store.store_id} (page ${pageCount}):`, error.message);
+      if (error.response) {
+        console.error(`❌ API Response: ${error.response.status} - ${error.response.statusText}`);
+      }
       break;
     }
   }
 
+  const duration = Date.now() - startTime;
+  console.log(`📦 Store ${store.store_id}: Product fetch completed in ${duration}ms (${allProducts.length} total products)`);
   return allProducts;
 }
 
@@ -80,9 +92,14 @@ async function fetchStoreOrders(store) {
   const allOrders = [];
   let offset = 0;
   const limit = 100;
+  let pageCount = 0;
+  const startTime = Date.now();
+
+  console.log(`📋 Fetching orders for store ${store.store_id}...`);
 
   while (true) {
     try {
+      pageCount++;
       const response = await axios.get(`${ECWID_API_BASE}/${store.store_id}/orders`, {
         headers: {
           'Authorization': `Bearer ${store.access_token}`
@@ -96,17 +113,24 @@ async function fetchStoreOrders(store) {
       const orders = response.data.items || [];
       allOrders.push(...orders);
 
+      console.log(`📋 Store ${store.store_id}: Fetched page ${pageCount} (${orders.length} orders)`);
+
       if (orders.length < limit) {
         break;
       }
 
       offset += limit;
     } catch (error) {
-      console.error(`❌ Error fetching orders for store ${store.store_id}:`, error.message);
+      console.error(`❌ Error fetching orders for store ${store.store_id} (page ${pageCount}):`, error.message);
+      if (error.response) {
+        console.error(`❌ API Response: ${error.response.status} - ${error.response.statusText}`);
+      }
       break;
     }
   }
 
+  const duration = Date.now() - startTime;
+  console.log(`📋 Store ${store.store_id}: Order fetch completed in ${duration}ms (${allOrders.length} total orders)`);
   return allOrders;
 }
 
@@ -114,7 +138,11 @@ async function fetchStoreOrders(store) {
  * Store products in database
  */
 async function storeProducts(storeId, products) {
+  const startTime = Date.now();
+  
   try {
+    console.log(`💾 Processing products for store ${storeId}...`);
+    
     // Ensure store exists in database before inserting products
     const existingStore = await storeService.findByStoreId(storeId);
     if (!existingStore) {
@@ -123,9 +151,12 @@ async function storeProducts(storeId, products) {
     }
     
     // DELETE: Remove all existing products for this store
+    console.log(`🗑️  Deleting existing products for store ${storeId}...`);
     const deleteResult = await productService.deleteByStoreId(storeId);
+    console.log(`🗑️  Deleted ${deleteResult} existing products for store ${storeId}`);
     
     // Process products to calculate minimum prices from variants and filter enabled products
+    console.log(`⚙️  Processing ${products.length} products for store ${storeId}...`);
     const processedProducts = products
       .map(product => {
         // Calculate minimum price from variants if they exist
@@ -193,13 +224,22 @@ async function storeProducts(storeId, products) {
         return product.enabled && product.stock > 0;
       });
 
+    console.log(`⚙️  Processed ${processedProducts.length} valid products (${products.length - processedProducts.length} filtered out)`);
+
     // INSERT: Insert all current products from API
+    console.log(`💾 Inserting ${processedProducts.length} products into database...`);
     const result = await productService.bulkInsert(storeId, processedProducts);
-    console.log(`✅ Store ${storeId}: ${result.created} products stored (${result.errors} errors, ${products.length} total fetched, ${processedProducts.length} processed)`);
+    
+    const duration = Date.now() - startTime;
+    console.log(`✅ Store ${storeId}: ${result.created} products stored (${result.errors} errors, ${products.length} total fetched, ${processedProducts.length} processed) in ${duration}ms`);
     
     return result;
   } catch (error) {
-    console.error(`❌ Error storing products for store ${storeId}:`, error.message);
+    const duration = Date.now() - startTime;
+    console.error(`❌ Error storing products for store ${storeId} after ${duration}ms:`, error.message);
+    if (error.stack) {
+      console.error(`❌ Stack trace:`, error.stack);
+    }
     throw error;
   }
 }
@@ -208,7 +248,11 @@ async function storeProducts(storeId, products) {
  * Store orders in database
  */
 async function storeOrders(storeId, orders) {
+  const startTime = Date.now();
+  
   try {
+    console.log(`💾 Processing orders for store ${storeId}...`);
+    
     // Ensure store exists in database before inserting orders
     const existingStore = await storeService.findByStoreId(storeId);
     if (!existingStore) {
@@ -217,15 +261,24 @@ async function storeOrders(storeId, orders) {
     }
     
     // DELETE: Remove all existing orders for this store
+    console.log(`🗑️  Deleting existing orders for store ${storeId}...`);
     const deleteResult = await orderService.deleteByStoreId(storeId);
+    console.log(`🗑️  Deleted ${deleteResult} existing orders for store ${storeId}`);
     
     // INSERT: Insert all current orders from API
+    console.log(`💾 Inserting ${orders.length} orders into database...`);
     const result = await orderService.bulkInsert(storeId, orders);
-    console.log(`✅ Store ${storeId}: ${result.created} orders stored (${result.errors} errors)`);
+    
+    const duration = Date.now() - startTime;
+    console.log(`✅ Store ${storeId}: ${result.created} orders stored (${result.errors} errors) in ${duration}ms`);
     
     return result;
   } catch (error) {
-    console.error(`❌ Error storing orders for store ${storeId}:`, error.message);
+    const duration = Date.now() - startTime;
+    console.error(`❌ Error storing orders for store ${storeId} after ${duration}ms:`, error.message);
+    if (error.stack) {
+      console.error(`❌ Stack trace:`, error.stack);
+    }
     throw error;
   }
 }
@@ -248,9 +301,12 @@ async function syncAllStores() {
 
     console.log(`🟢 Starting sync for ${stores.length} stores...`);
 
-    for (const store of stores) {
+    for (let i = 0; i < stores.length; i++) {
+      const store = stores[i];
+      const storeStartTime = Date.now();
+      
       try {
-        console.log(`\n🟢 Syncing store ${store.store_id} (${store.store_name})...`);
+        console.log(`\n🟢 [${i + 1}/${stores.length}] Syncing store ${store.store_id} (${store.store_name})...`);
         
         // Fetch and store products
         const products = await fetchStoreProducts(store);
@@ -261,31 +317,42 @@ async function syncAllStores() {
         await storeOrders(store.store_id, orders);
         
         // Generate category recommendations (after orders are stored)
+        console.log(`🎯 Generating category recommendations for store ${store.store_id}...`);
         try {
+          const categoryStartTime = Date.now();
           const categorySummary = await categoryService.generateAllCategoryRecommendations(store.store_id);
           const categoryCount = categorySummary?.successful || 0;
           const categoryTotal = categorySummary?.totalCategories || 0;
-          console.log(`✅ Store ${store.store_id}: ${categoryCount}/${categoryTotal} category recommendations generated`);
+          const categoryDuration = Date.now() - categoryStartTime;
+          console.log(`✅ Store ${store.store_id}: ${categoryCount}/${categoryTotal} category recommendations generated in ${categoryDuration}ms`);
         } catch (catError) {
-          console.log(`🟡 Store ${store.store_id}: Category recommendations failed, using fallbacks`);
+          console.log(`🟡 Store ${store.store_id}: Category recommendations failed, using fallbacks - ${catError.message}`);
         }
         
         // Generate recommendations for all products (after orders are stored for cross-sell analysis)
         if (products.length > 0) {
+          console.log(`🎯 Generating product recommendations for store ${store.store_id}...`);
           try {
+            const recommendationStartTime = Date.now();
             const recommendationSummary = await productService.generateAllRecommendations(store.store_id);
             const productCount = recommendationSummary?.successful || 0;
             const productTotal = recommendationSummary?.totalProducts || 0;
-            console.log(`✅ Store ${store.store_id}: ${productCount}/${productTotal} product recommendations generated`);
+            const recommendationDuration = Date.now() - recommendationStartTime;
+            console.log(`✅ Store ${store.store_id}: ${productCount}/${productTotal} product recommendations generated in ${recommendationDuration}ms`);
           } catch (recError) {
-            console.log(`🟡 Store ${store.store_id}: Product recommendations failed, using fallbacks`);
+            console.log(`🟡 Store ${store.store_id}: Product recommendations failed, using fallbacks - ${recError.message}`);
           }
         }
         
-        console.log(`✅ Completed sync for store ${store.store_id}`);
+        const storeDuration = Date.now() - storeStartTime;
+        console.log(`✅ Completed sync for store ${store.store_id} in ${storeDuration}ms`);
         
       } catch (error) {
-        console.error(`❌ Error during sync for store ${store.store_id}:`, error.message);
+        const storeDuration = Date.now() - storeStartTime;
+        console.error(`❌ Error during sync for store ${store.store_id} after ${storeDuration}ms:`, error.message);
+        if (error.stack) {
+          console.error(`❌ Stack trace:`, error.stack);
+        }
       }
     }
 
@@ -301,5 +368,13 @@ async function syncAllStores() {
 }
 
 // Run the sync
+const overallStartTime = Date.now();
 console.log('🟢 Starting background sync...');
-syncAllStores();
+syncAllStores().then(() => {
+  const overallDuration = Date.now() - overallStartTime;
+  console.log(`\n🎉 Background sync completed in ${overallDuration}ms`);
+}).catch(error => {
+  const overallDuration = Date.now() - overallStartTime;
+  console.error(`\n💥 Background sync failed after ${overallDuration}ms:`, error.message);
+  process.exit(1);
+});
