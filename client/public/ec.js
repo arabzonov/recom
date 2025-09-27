@@ -563,6 +563,9 @@
                             window.Ecwid.Cart.addProduct(productId);
                         }
                         console.log('[DEBUG] Product added to cart successfully');
+                        
+                        // Add visual feedback
+                        this.showCartSuccessFeedback(buttonEl);
                     } catch (cartError) {
                         console.log('[DEBUG] Error adding to cart:', cartError);
                     }
@@ -572,6 +575,23 @@
             } catch (e) {
                 // Silently handle errors
             }
+        }
+
+        showCartSuccessFeedback(buttonEl) {
+            // Store original text
+            const originalText = buttonEl.textContent;
+            
+            // Add success class immediately (no blinking)
+            buttonEl.classList.add('recom-cart-btn-success');
+            
+            // Change text to "Added!"
+            buttonEl.textContent = 'Added!';
+            
+            // Revert text and styling after 3 seconds
+            setTimeout(() => {
+                buttonEl.textContent = originalText;
+                buttonEl.classList.remove('recom-cart-btn-success');
+            }, 3000);
         }
 
         navigateToProduct(productId, productUrl) {
