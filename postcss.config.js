@@ -1,6 +1,10 @@
 export default {
   plugins: {
     tailwindcss: {},
-    autoprefixer: {},
+    autoprefixer: {
+      // Add support for line-clamp property
+      add: true,
+      remove: false,
+    },
   },
 };

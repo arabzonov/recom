@@ -431,13 +431,26 @@ class RecommendationService extends BaseDataAccess {
     // Get full product details for recommendations
     const placeholders = recommendationIds.map(() => '?').join(',');
     const sql = `
-      SELECT ecwid_product_id, name, price, image_url, sku
+      SELECT ecwid_product_id, name, price, compare_to_price, image_url, sku
       FROM products 
       WHERE store_id = ? AND ecwid_product_id IN (${placeholders})
       ORDER BY price DESC
     `;
 
-    return await this.query(sql, [storeId, ...recommendationIds]);
+    const results = await this.query(sql, [storeId, ...recommendationIds]);
+    
+    // Enhanced logging for debugging compare_to
+    console.log(`[RecommendationService] Retrieved ${results.length} products for recommendations:`, 
+      results.map(r => ({
+        id: r.ecwid_product_id,
+        name: r.name,
+        price: r.price,
+        compare_to_price: r.compare_to_price,
+        hasCompareTo: r.compare_to_price !== null && r.compare_to_price > 0
+      }))
+    );
+    
+    return results;
   }
 
 }

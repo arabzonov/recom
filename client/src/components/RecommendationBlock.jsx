@@ -14,6 +14,11 @@ const RecommendationBlock = ({ storeId, productId, isEnabled = true }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Do not render in storefront: ec.js injects the full block there
+  if (typeof window !== 'undefined' && window.Ecwid) {
+    return null;
+  }
+
   useEffect(() => {
     if (isEnabled) {
       initializeRecommendations();
@@ -87,81 +92,7 @@ const RecommendationBlock = ({ storeId, productId, isEnabled = true }) => {
     return null;
   }
 
-  return (
-    <div className="recom-block">
-      <div className="recom-header">
-        <h3 className="recom-title">
-          You might also like
-        </h3>
-        <div className="recom-divider" />
-      </div>
-
-      {loading && (
-        <div className="recom-loading">
-          <div className="recom-spinner" />
-          Loading recommendations...
-        </div>
-      )}
-
-      {error && (
-        <div className="recom-error">
-          {error}
-        </div>
-      )}
-
-      {!loading && recommendations.length > 0 && (
-        <div className="recom-grid">
-          {recommendations.map((product, index) => (
-            <div 
-              key={product.ecwid_product_id || index} 
-              className="recom-item"
-              onClick={() => {
-                // Navigate to product page
-                if (product.ecwid_product_id) {
-                  window.location.href = `#product=${product.ecwid_product_id}`;
-                }
-              }}
-            >
-              {product.image_url && (
-                <div className="recom-image">
-                  <img 
-                    src={product.image_url} 
-                    alt={product.name}
-                    onError={(e) => {
-                      e.target.style.display = 'none';
-                    }}
-                  />
-                </div>
-              )}
-              
-              <h4 className="recom-name">
-                {product.name}
-              </h4>
-              
-              {product.price && (
-                <div className="recom-price">
-                  ${parseFloat(product.price).toFixed(2)}
-                </div>
-              )}
-              
-              <button 
-                className="recom-cart-btn"
-                onClick={(e) => {
-                  e.stopPropagation(); // Prevent tile click
-                  // Add to cart functionality
-                  if (window.Ecwid && window.Ecwid.Cart && product.ecwid_product_id) {
-                    window.Ecwid.Cart.addProduct(product.ecwid_product_id);
-                  }
-                }}
-              >
-                Add to cart
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
+  return null;
 };
 
 export default RecommendationBlock;

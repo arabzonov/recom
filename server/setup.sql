@@ -29,6 +29,7 @@ CREATE TABLE products (
   ecwid_product_id TEXT NOT NULL,
   name TEXT NOT NULL,
   price REAL,
+  compare_to_price REAL,
   stock INTEGER DEFAULT 0,
   sku TEXT,
   image_url TEXT,

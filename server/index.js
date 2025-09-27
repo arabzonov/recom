@@ -66,10 +66,12 @@ app.set('trust proxy', 1);
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   
-  // Always set CORS headers first
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  // Allow all origins - Ecwid storefronts can be on any domain
+  res.setHeader('Access-Control-Allow-Origin', origin || '*');
+  
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
   res.removeHeader('Access-Control-Allow-Credentials');
   
   // Handle preflight OPTIONS requests immediately
@@ -100,11 +102,12 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://connect.facebook.net", "https://www.googletagmanager.com", "https://app.ecwid.com"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://connect.facebook.net", "https://www.googletagmanager.com", "https://app.ecwid.com", "https://*.ecwid.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://*.ecwid.com"],
       imgSrc: ["'self'", "data:", "https://*.ecwid.com", "https://images-cdn.ecwid.com"],
-      connectSrc: ["'self'", "https://*.ecwid.com"],
-      frameSrc: ["'self'", "https://app.ecwid.com"],
+      connectSrc: ["'self'", "https://*.ecwid.com", "https://ec.1nax.app"],
+      frameSrc: ["'self'", "https://app.ecwid.com", "https://*.ecwid.com"],
+      fontSrc: ["'self'", "https://*.ecwid.com"],
     },
   },
   hsts: {
@@ -169,6 +172,24 @@ app.use('/api/oauth', oauthRoutes);
 app.use('/api/ecwid/recommendations', recommendationRoutes);
 app.use('/api/ecwid/recommendation-settings', recommendationSettingsRoutes);
 
+// Proxy endpoint to fetch product details (including options)
+app.get('/api/proxy/product/:storeId/:productId', async (req, res) => {
+  try {
+    const { storeId, productId } = req.params;
+    const { StoreService } = await import('./data/index.js');
+    const storeService = new StoreService();
+    const store = await storeService.findByStoreId(storeId);
+    if (!store || !store.access_token) {
+      return res.status(404).json({ success: false, error: 'Store not found or not authenticated' });
+    }
+    const EcwidApiService = (await import('./services/EcwidApiService.js')).default;
+    const product = await EcwidApiService.getProduct(storeId, store.access_token, productId);
+    res.json({ success: true, product });
+  } catch (err) {
+    res.status(500).json({ success: false, error: 'Failed to fetch product details' });
+  }
+});
+
 // Proxy endpoint to handle CORS for frontend - get settings
 app.get('/api/proxy/recommendations/:storeId', async (req, res) => {
   try {
@@ -177,6 +198,7 @@ app.get('/api/proxy/recommendations/:storeId', async (req, res) => {
     logger.info(`[PROXY] Request received for store ${storeId}`);
     logger.info(`[PROXY] Origin: ${req.headers.origin}`);
     logger.info(`[PROXY] User-Agent: ${req.headers['user-agent']}`);
+    logger.info(`[PROXY] Headers: ${JSON.stringify(req.headers)}`);
     
     // Import StoreService to fetch actual settings
     const { StoreService } = await import('./data/index.js');

@@ -62,6 +62,17 @@ async function fetchStoreProducts(store) {
       });
 
       const products = response.data.items || [];
+      
+      // Enhanced logging for debugging compare_to from Ecwid API
+      if (products.length > 0) {
+        console.log(`[SYNC] Sample product from Ecwid API:`, {
+          sampleProduct: products[0],
+          sampleProductKeys: Object.keys(products[0]),
+          hasCompareToPrice: products[0].compareToPrice !== undefined,
+          compareToPriceValue: products[0].compareToPrice
+        });
+      }
+      
       allProducts.push(...products);
 
       console.log(`📦 Store ${store.store_id}: Fetched page ${pageCount} (${products.length} products)`);
@@ -206,10 +217,22 @@ async function storeProducts(storeId, products) {
           });
         }
 
+        // Enhanced logging for debugging compare_to
+        if (product.compareToPrice) {
+          console.log(`[SYNC] Product ${product.id} has compareToPrice:`, {
+            id: product.id,
+            name: product.name,
+            price: minPrice,
+            compareToPrice: product.compareToPrice,
+            originalProductData: product
+          });
+        }
+
         return {
           id: product.id,
           name: product.name,
           price: minPrice,
+          compareToPrice: product.compareToPrice, // Ecwid API uses compareToPrice
           stock: totalStock,
           categoryId: JSON.stringify(product.categoryIds),
           enabled: product.enabled,

@@ -22,6 +22,23 @@ class EcwidApiService {
     return response.data;
   }
 
+  /**
+   * Get product details including options
+   * @param {string|number} storeId
+   * @param {string} accessToken
+   * @param {string|number} productId
+   * @returns {Object} Product details
+   */
+  static async getProduct(storeId, accessToken, productId) {
+    const response = await axios.get(`${this.ECWID_API_BASE}/${storeId}/products/${productId}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      }
+    });
+    return response.data;
+  }
+
 }
 
 export default EcwidApiService;

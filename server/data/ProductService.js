@@ -70,6 +70,7 @@ class ProductService extends BaseDataAccess {
       ecwidProductId,
       name,
       price,
+      compareToPrice,
       stock,
       sku,
       imageUrl,
@@ -88,11 +89,12 @@ class ProductService extends BaseDataAccess {
       // Update existing product
       await this.execute(`
         UPDATE products 
-        SET name = ?, price = ?, stock = ?, sku = ?, image_url = ?, category_ids = ?, product_url = ?, options = ?
+        SET name = ?, price = ?, compare_to_price = ?, stock = ?, sku = ?, image_url = ?, category_ids = ?, product_url = ?, options = ?
         WHERE store_id = ? AND ecwid_product_id = ?
       `, [
         name,
         price,
+        compareToPrice,
         stock,
         sku,
         imageUrl,
@@ -114,13 +116,14 @@ class ProductService extends BaseDataAccess {
     } else {
       // Create new product
       await this.execute(`
-        INSERT INTO products (store_id, ecwid_product_id, name, price, stock, sku, image_url, category_ids, product_url, options)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO products (store_id, ecwid_product_id, name, price, compare_to_price, stock, sku, image_url, category_ids, product_url, options)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [
         storeId,
         ecwidProductId,
         name,
         price,
+        compareToPrice,
         stock,
         sku,
         imageUrl,
@@ -201,11 +204,23 @@ class ProductService extends BaseDataAccess {
 
     for (const product of products) {
       try {
+        // Debug logging for compareToPrice field
+        console.log(`[ProductService] Processing product ${product.id}:`, {
+          id: product.id,
+          name: product.name,
+          price: product.price,
+          compareToPrice: product.compareToPrice,
+          hasCompareToPrice: product.compareToPrice !== undefined,
+          compareToPriceValue: product.compareToPrice,
+          allKeys: Object.keys(product)
+        });
+
         const productData = {
           storeId,
           ecwidProductId: product.id.toString(),
           name: product.name,
           price: product.price,
+          compareToPrice: product.compareToPrice,
           stock: product.stock,
           sku: product.sku,
           imageUrl: product.imageUrl,
