@@ -21,6 +21,28 @@ class ProductService extends BaseDataAccess {
   }
 
   /**
+   * Find products by store ID and multiple Ecwid product IDs
+   * @param {string} storeId - Store ID
+   * @param {Array} ecwidProductIds - Array of Ecwid product IDs
+   * @returns {Promise<Array>} Array of product records
+   */
+  async findByStoreAndEcwidIds(storeId, ecwidProductIds) {
+    if (!ecwidProductIds || ecwidProductIds.length === 0) {
+      return [];
+    }
+
+    const placeholders = ecwidProductIds.map(() => '?').join(',');
+    const sql = `
+      SELECT ecwid_product_id, name, price, compare_to_price, image_url, sku, stock, options
+      FROM products 
+      WHERE store_id = ? AND ecwid_product_id IN (${placeholders})
+      ORDER BY price DESC
+    `;
+
+    return await this.query(sql, [storeId, ...ecwidProductIds]);
+  }
+
+  /**
    * Find all products for a store
    * @param {string} storeId - Store ID
    * @param {Object} options - Query options

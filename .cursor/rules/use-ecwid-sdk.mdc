@@ -1,0 +1,4 @@
+---
+description:Do not create hacks or try to guess when there is appropriate Ecwid SDK methods for the actions. This applies to URL parsing, regex matching, dom parsing, etc.
+alwaysApply: true
+---

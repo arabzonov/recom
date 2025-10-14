@@ -322,6 +322,118 @@ if (!APP_VERSION) {
   process.exit(1);
 }
 
+// Proxy endpoint to handle CORS for frontend - get all products for store
+app.get('/api/proxy/products/:storeId', async (req, res) => {
+  try {
+    const { storeId } = req.params;
+    
+    logger.info(`[PROXY] All products request received for store ${storeId}`);
+    
+    // Import services
+    const { StoreService } = await import('./data/index.js');
+    const ProductService = (await import('./data/ProductService.js')).default;
+    
+    const storeService = new StoreService();
+    const productService = new ProductService();
+    
+    // Check if store exists and is authenticated
+    const store = await storeService.findByStoreId(storeId);
+    if (!store) {
+      logger.warn(`[PROXY] Store ${storeId} not found`);
+      return res.status(404).json({
+        success: false,
+        error: 'Store not found'
+      });
+    }
+    
+    if (!store.access_token) {
+      logger.warn(`[PROXY] Store ${storeId} not authenticated`);
+      return res.status(401).json({
+        success: false,
+        error: 'Store not authenticated'
+      });
+    }
+    
+    // Get all products for the store (limited to 3 for recommendations)
+    const products = await productService.findByStoreId(storeId, { limit: 3 });
+    logger.info(`[PROXY] Returning ${products.length} products for store ${storeId}`);
+    
+    const response = {
+      success: true,
+      products: products
+    };
+    
+    res.json(response);
+    
+  } catch (error) {
+    logger.error('[PROXY] All products request failed', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// Proxy endpoint to handle CORS for frontend - get category recommendations
+app.get('/api/proxy/recommendations/category/:storeId/:categoryId', async (req, res) => {
+  try {
+    const { storeId, categoryId } = req.params;
+    
+    logger.info(`[PROXY] Category recommendations request received for store ${storeId}, category ${categoryId}`);
+    
+    // Import services to fetch category recommendations
+    const { StoreService } = await import('./data/index.js');
+    const CategoryService = (await import('./data/CategoryService.js')).default;
+    const ProductService = (await import('./data/ProductService.js')).default;
+    
+    const storeService = new StoreService();
+    const categoryService = new CategoryService();
+    const productService = new ProductService();
+    
+    // Check if store exists and is authenticated
+    const store = await storeService.findByStoreId(storeId);
+    if (!store) {
+      logger.warn(`[PROXY] Store ${storeId} not found`);
+      return res.status(404).json({
+        success: false,
+        error: 'Store not found'
+      });
+    }
+    
+    if (!store.access_token) {
+      logger.warn(`[PROXY] Store ${storeId} not authenticated`);
+      return res.status(401).json({
+        success: false,
+        error: 'Store not authenticated'
+      });
+    }
+    
+    // Get category recommendations
+    const recommendationIds = await categoryService.getCategoryRecommendations(storeId, categoryId);
+    logger.info(`[PROXY] Found ${recommendationIds.length} recommendation IDs for category ${categoryId}`);
+    
+    let recommendations = [];
+    if (recommendationIds.length > 0) {
+      recommendations = await productService.findByStoreAndEcwidIds(storeId, recommendationIds);
+      logger.info(`[PROXY] Returning ${recommendations.length} category recommendations for store ${storeId}, category ${categoryId}`);
+    }
+    
+    const response = {
+      success: true,
+      recommendations: recommendations
+    };
+    
+    res.json(response);
+    
+  } catch (error) {
+    logger.error('[PROXY] Category recommendations request failed', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ 
     status: 'OK', 

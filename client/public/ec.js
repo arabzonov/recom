@@ -11,30 +11,502 @@
  * URL: https://ec.1nax.app/ec.js
  */
 
+
 (function() {
     'use strict';
+    
 
     // Configuration
     const CONFIG = {
         apiBase: 'https://ec.1nax.app/api/proxy',
-        maxRetries: 3,
-        retryDelay: 1000,
         cssUrl: 'https://ec.1nax.app/ec.css'
     };
 
-    class EcwidRecomRecommendationApp {
+    /**
+     * EcwidSDK Layer
+     * Handles all interactions with Ecwid JavaScript API
+     * Provides a clean interface for cart, page, and product operations
+     * 
+     * Only includes methods that actually exist in the Ecwid JavaScript API
+     */
+    class EcwidSDK {
         constructor() {
+            this.isInitialized = false;
             this.storeId = null;
-            this.productId = null;
+            this.currentPage = null;
+            this.currentPageType = null;
+            this.currentProductId = null;
+            this.currentCategoryId = null;
+            
+            this.initPromise = null;
+            this.pageLoadCallbacks = [];
+            this.apiLoadCallbacks = [];
+        }
+
+        /**
+         * Initialize the Ecwid SDK
+         * @returns {Promise} Promise that resolves when SDK is ready
+         */
+        async init() {
+            if (this.initPromise) {
+                return this.initPromise;
+            }
+
+            this.initPromise = new Promise((resolve) => {
+            if (window.Ecwid && window.Ecwid.OnAPILoaded) {
+                window.Ecwid.OnAPILoaded.add(() => {
+                        this.isInitialized = true;
+                        this.storeId = window.Ecwid.getOwnerId();
+                        
+                        // Execute all API load callbacks
+                        this.apiLoadCallbacks.forEach(callback => callback());
+                        this.apiLoadCallbacks = [];
+                        
+                        resolve();
+                });
+            } else {
+                    console.warn('[SDK] Ecwid API not available');
+                    resolve();
+                }
+            });
+
+            return this.initPromise;
+        }
+
+        /**
+         * Add callback for when Ecwid API is loaded
+         * @param {Function} callback 
+         */
+        onAPILoaded(callback) {
+            if (this.isInitialized) {
+                callback();
+            } else {
+                this.apiLoadCallbacks.push(callback);
+            }
+        }
+
+        /**
+         * Add callback for when page is loaded
+         * @param {Function} callback 
+         */
+        onPageLoaded(callback) {
+            this.pageLoadCallbacks.push(callback);
+            
+            if (window.Ecwid && window.Ecwid.OnPageLoaded) {
+                window.Ecwid.OnPageLoaded.add((page) => {
+                    this.currentPage = page;
+                    this.currentPageType = page.type;
+                    this.currentProductId = page.productId || null;
+                    this.currentCategoryId = page.categoryId || null;
+                    
+                    // Execute all page load callbacks
+                    this.pageLoadCallbacks.forEach(cb => cb(page));
+                });
+                    } else {
+                console.warn('[SDK] OnPageLoaded not available');
+            }
+        }
+
+        /**
+         * Get the store ID
+         * @returns {string|null}
+         */
+        getStoreId() {
+            return this.storeId;
+        }
+
+        /**
+         * Get current page type
+         * @returns {string|null}
+         */
+        getCurrentPageType() {
+            return this.currentPageType;
+        }
+
+        /**
+         * Get current product ID
+         * @returns {string|null}
+         */
+        getCurrentProductId() {
+            return this.currentProductId;
+        }
+
+        /**
+         * Get current category ID
+         * @returns {string|null}
+         */
+        getCurrentCategoryId() {
+            return this.currentCategoryId;
+        }
+
+        /**
+         * Get current page data
+         * @returns {Object|null}
+         */
+        getCurrentPage() {
+            return this.currentPage;
+        }
+
+        /**
+         * Get cart items using Ecwid Cart API
+         * @returns {Promise<Array>} Array of cart items
+         */
+        async getCartItems() {
+            
+            if (!this.isInitialized || !window.Ecwid || !window.Ecwid.Cart) {
+                console.warn('[SDK] Cannot get cart items - SDK not initialized or Cart API not available');
+                return [];
+            }
+
+            try {
+                // Try getItems first (synchronous)
+                if (window.Ecwid.Cart.getItems) {
+                    const items = window.Ecwid.Cart.getItems();
+                    return items || [];
+                }
+                
+                // Fallback to get method (asynchronous)
+                if (window.Ecwid.Cart.get) {
+                    return new Promise((resolve) => {
+                        window.Ecwid.Cart.get((cart) => {
+                            resolve(cart.items || []);
+                        });
+                    });
+                }
+                
+                console.warn('[SDK] No cart methods available');
+            } catch (error) {
+                console.error('[SDK] Error getting cart items:', error);
+            }
+            
+            return [];
+        }
+
+        /**
+         * Add product to cart using Ecwid Cart API
+         * @param {string|number} productId 
+         * @param {Object} options - Product options
+         * @returns {boolean} Success status
+         */
+        addToCart(productId, options = null) {
+            
+            if (!this.isInitialized || !window.Ecwid || !window.Ecwid.Cart) {
+                console.warn('[SDK] Cannot add to cart - SDK not initialized or Cart API not available');
+                return false;
+            }
+
+            try {
+                if (options) {
+                    window.Ecwid.Cart.addProduct({ id: productId, options: options });
+                } else {
+                    window.Ecwid.Cart.addProduct(productId);
+                }
+                return true;
+            } catch (error) {
+                console.error('[SDK] Error adding product to cart:', error);
+                return false;
+            }
+        }
+
+        /**
+         * Open a page using Ecwid navigation API
+         * @param {string} pageType - Type of page to open
+         * @param {Object} params - Parameters for the page
+         */
+        openPage(pageType, params = {}) {
+            
+            if (!this.isInitialized || !window.Ecwid || !window.Ecwid.openPage) {
+                console.warn('[SDK] Cannot open page - SDK not initialized or openPage API not available');
+                        return;
+                    }
+                    
+            try {
+                window.Ecwid.openPage(pageType, params);
+            } catch (error) {
+                console.error('[SDK] Error opening page:', error);
+            }
+        }
+
+        /**
+         * Open product page using Ecwid navigation API
+         * @param {string|number} productId 
+         */
+        openProductPage(productId) {
+            this.openPage('product', { id: parseInt(productId) });
+        }
+
+        /**
+         * Check if SDK is initialized
+         * @returns {boolean}
+         */
+        isReady() {
+            return this.isInitialized;
+        }
+
+        /**
+         * Wait for SDK to be ready
+         * @returns {Promise}
+         */
+        async waitForReady() {
+            if (this.isInitialized) {
+                return Promise.resolve();
+            }
+            return this.initPromise || this.init();
+        }
+    }
+
+    /**
+     * API Layer
+     * Handles all backend API calls
+     * Provides a clean interface for recommendation and product data
+     */
+    class RecommendationAPI {
+        constructor(config) {
+            this.config = config;
+            this.apiBase = config.apiBase;
+            this.storeId = null;
+        }
+
+        /**
+         * Set the store ID
+         * @param {string} storeId 
+         */
+        setStoreId(storeId) {
+            this.storeId = storeId;
+        }
+
+        /**
+         * Make API request with retry logic
+         * @param {string} url 
+         * @param {Object} options 
+         * @returns {Promise<Response>}
+         */
+        async fetchWithRetry(url, options = {}) {
+            const maxRetries = 3;
+            let lastError;
+
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            try {
+                const response = await fetch(url, {
+                    ...options,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    }
+                });
+
+
+                    if (response.ok) {
+                        return response;
+                    }
+
+                    // If it's a server error (5xx), retry
+                    if (response.status >= 500 && attempt < maxRetries) {
+                        console.warn(`[API] Attempt ${attempt} failed with status ${response.status}, retrying...`);
+                        await this.delay(1000 * attempt); // Exponential backoff
+                        continue;
+                    }
+
+                    // If it's a client error (4xx), don't retry
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            } catch (error) {
+                    lastError = error;
+                    console.warn(`[API] Attempt ${attempt} failed:`, error.message);
+                    
+                    if (attempt < maxRetries) {
+                        await this.delay(1000 * attempt);
+                    }
+                }
+            }
+
+            console.error('[API] All attempts failed, throwing error:', lastError);
+            throw lastError;
+        }
+
+        /**
+         * Delay utility
+         * @param {number} ms 
+         * @returns {Promise}
+         */
+        delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        /**
+         * Get recommendation settings
+         * @returns {Promise<Object>}
+         */
+        async getRecommendationSettings() {
+            
+            if (!this.storeId) {
+                console.error('[API] Store ID not set');
+                throw new Error('Store ID not set');
+            }
+
+            const url = `${this.apiBase}/recommendations/${this.storeId}`;
+            
+                const response = await this.fetchWithRetry(url);
+                const data = await response.json();
+
+            
+            if (!data.success) {
+                console.error('[API] Failed to get recommendation settings');
+                throw new Error('Failed to get recommendation settings');
+            }
+            
+            return data.settings;
+        }
+
+        /**
+         * Get product recommendations
+         * @param {string} productId 
+         * @param {string} type - 'upsells' or 'crosssells'
+         * @returns {Promise<Array>}
+         */
+        async getProductRecommendations(productId, type) {
+            
+            if (!this.storeId) {
+                console.error('[API] Store ID not set');
+                throw new Error('Store ID not set');
+            }
+
+            const url = `${this.apiBase}/recommendations/${this.storeId}/${productId}?type=${type}`;
+            
+            const response = await this.fetchWithRetry(url);
+            const data = await response.json();
+            
+            
+            if (!data.success) {
+                console.error(`[API] Failed to get ${type} recommendations`);
+                throw new Error(`Failed to get ${type} recommendations`);
+            }
+            
+            return data.recommendations || [];
+        }
+
+        /**
+         * Get category recommendations
+         * @param {string} categoryId 
+         * @returns {Promise<Array>}
+         */
+        async getCategoryRecommendations(categoryId) {
+            
+            if (!this.storeId) {
+                console.error('[API] Store ID not set');
+                throw new Error('Store ID not set');
+            }
+
+            const url = `${this.apiBase}/recommendations/category/${this.storeId}/${categoryId}`;
+            
+                const response = await this.fetchWithRetry(url);
+                const data = await response.json();
+
+            
+            if (!data.success) {
+                console.error('[API] Failed to get category recommendations');
+                throw new Error('Failed to get category recommendations');
+            }
+            
+            return data.recommendations || [];
+        }
+
+        /**
+         * Get all products (fallback)
+         * @returns {Promise<Array>}
+         */
+        async getAllProducts() {
+            
+            if (!this.storeId) {
+                console.error('[API] Store ID not set');
+                throw new Error('Store ID not set');
+            }
+
+            const url = `${this.apiBase}/products/${this.storeId}`;
+            
+            const response = await this.fetchWithRetry(url);
+            const data = await response.json();
+            
+            
+            if (!data.success) {
+                console.error('[API] Failed to get all products');
+                throw new Error('Failed to get all products');
+            }
+            
+            return data.products || [];
+        }
+
+        /**
+         * Get product data
+         * @param {string} productId 
+         * @returns {Promise<Object>}
+         */
+        async getProduct(productId) {
+            
+            if (!this.storeId) {
+                console.error('[API] Store ID not set');
+                throw new Error('Store ID not set');
+            }
+
+            const url = `${this.apiBase}/product/${this.storeId}/${productId}`;
+            
+            const response = await this.fetchWithRetry(url);
+            const data = await response.json();
+            
+            
+            if (!data.success) {
+                console.error('[API] Failed to get product data');
+                throw new Error('Failed to get product data');
+            }
+            
+            return data.product;
+        }
+
+        /**
+         * Enrich recommendations with product options
+         * @param {Array} recommendations 
+         * @returns {Promise<Array>}
+         */
+        async enrichRecommendationsWithOptions(recommendations) {
+            
+            try {
+                const results = await Promise.all(recommendations.map(async (p, index) => {
+                    try {
+                        const productData = await this.getProduct(p.ecwid_product_id);
+                        if (productData && productData.options) {
+                            return { ...p, options: productData.options };
+                        }
+                    } catch (error) {
+                        console.warn(`[API] Error getting product options for ${p.ecwid_product_id}:`, error);
+                    }
+                    return p;
+                }));
+                
+                return results;
+            } catch (error) {
+                console.error('[API] Error enriching recommendations:', error);
+                return recommendations;
+            }
+        }
+    }
+
+    class RecomApp {
+        constructor() {
             this.isEnabled = false;
-            this.retryCount = 0;
             this.initialized = false;
+            this.recommendationBlockShown = false;
+            this.upsellBlockShown = false;
+            this.crossSellBlockShown = false;
+            
+            // Initialize layers
+            this.sdk = new EcwidSDK();
+            this.api = new RecommendationAPI(CONFIG);
+            
             this.init();
         }
 
-        init() {
+        async init() {
             this.loadStyles();
-            this.initializeEcwidAPI();
+            await this.initializeLayers();
         }
 
         loadStyles() {
@@ -47,125 +519,286 @@
             }
         }
 
-        initializeEcwidAPI() {
-            if (window.Ecwid && window.Ecwid.OnAPILoaded) {
-                window.Ecwid.OnAPILoaded.add(() => {
-                    this.extractStoreId();
-                    this.setupProductListener();
-                });
-            } else {
-                this.extractStoreId();
-                this.setupProductListener();
-            }
-        }
-
-        extractStoreId() {
-            if (window.Ecwid && window.Ecwid.getOwnerId) {
-                this.storeId = window.Ecwid.getOwnerId();
-            }
-        }
-
-        setupProductListener() {
-            if (window.Ecwid && window.Ecwid.OnPageLoaded) {
-                window.Ecwid.OnPageLoaded.add((page) => {
-                    this.clearExistingRecommendations();
-                    
-                    if (page.type === 'product' || page.type === 'PRODUCT') {
-                        if (page.productId) {
-                            this.productId = page.productId;
-                            this.checkSettings();
-                        }
-                    } else {
-                        this.productId = null;
-                    }
-                });
-            }
-        }
-
-        async checkSettings() {
-            if (!this.storeId) return;
-
+        async initializeLayers() {
             try {
-                const url = `${CONFIG.apiBase}/recommendations/${this.storeId}`;
-                const response = await this.fetchWithRetry(url);
-                const data = await response.json();
+                // Initialize SDK
+                await this.sdk.init();
+                
+                // Set store ID for API
+                const storeId = this.sdk.getStoreId();
+                if (storeId) {
+                    this.api.setStoreId(storeId);
+                }
 
-                if (data.success && data.settings) {
-                    const settings = data.settings;
-                    
-                    if (settings.showUpsells && settings.upsellLocations && settings.upsellLocations.productPage) {
-                        this.isEnabled = true;
-                        this.showRecommendations();
-                    }
+                // Set up page load listener
+                this.sdk.onPageLoaded((page) => {
+                    this.handlePageLoad(page);
+                });
+
+                this.initialized = true;
+            } catch (error) {
+                console.error('[RECOM] Error initializing layers:', error);
+            }
+        }
+
+        handlePageLoad(page) {
+            
+            // Check settings and show appropriate blocks based on page type
+            this.checkPageSettings();
+        }
+
+        async checkPageSettings() {
+            if (!this.initialized) {
+                    return;
+                }
+                
+            try {
+                const settings = await this.api.getRecommendationSettings();
+                const pageType = this.sdk.getCurrentPageType();
+                
+
+                if (pageType === 'CART') {
+                    await this.checkCartSettings(settings);
+                } else if (pageType === 'CHECKOUT') {
+                    await this.checkCheckoutSettings(settings);
+                } else if (pageType === 'PRODUCT') {
+                    await this.checkProductSettings(settings);
+                } else if (pageType === 'CATEGORY' || pageType === 'ORDER_CONFIRMATION') {
+                    await this.checkRecommendationSettings(settings);
+                    } else {
                 }
             } catch (error) {
-                // Silently handle errors
+                console.error('[RECOM] Error checking page settings:', error);
+            }
+        }
+
+        async checkCartSettings(settings) {
+            const cartUpsellsEnabled = settings.showUpsells && settings.upsellLocations?.cartPage;
+            const cartCrossSellsEnabled = settings.showCrossSells && settings.crossSellLocations?.cartPage;
+            
+            if (cartUpsellsEnabled || cartCrossSellsEnabled) {
+                this.isEnabled = true;
+                await this.showCartRecommendations(cartUpsellsEnabled, cartCrossSellsEnabled);
+            }
+        }
+
+        async checkCheckoutSettings(settings) {
+            const checkoutCrossSellsEnabled = settings.showCrossSells && settings.crossSellLocations?.checkoutPage;
+            
+            if (checkoutCrossSellsEnabled) {
+                this.isEnabled = true;
+                await this.showCrossSellRecommendations();
+            }
+        }
+
+        async checkProductSettings(settings) {
+            const productUpsellsEnabled = settings.showUpsells && settings.upsellLocations?.productPage;
+            const productCrossSellsEnabled = settings.showCrossSells && settings.crossSellLocations?.productPage;
+            
+            if (productUpsellsEnabled) {
+                this.isEnabled = true;
+                await this.showRecommendations();
+            }
+            
+            if (productCrossSellsEnabled) {
+                await this.showCrossSellRecommendations();
+            }
+            
+            // Also check for general recommendations on product page
+            await this.checkRecommendationSettings(settings);
+        }
+
+        async checkRecommendationSettings(settings) {
+            const recommendationsEnabled = settings.showRecommendations;
+            const categoryPageEnabled = settings.recommendationLocations?.categoryPage;
+            const productPageEnabled = settings.recommendationLocations?.productPage;
+            const thankYouPageEnabled = settings.recommendationLocations?.thankYouPage;
+            
+            if (recommendationsEnabled) {
+                const locationSettings = {
+                    categoryPageEnabled,
+                    productPageEnabled,
+                    thankYouPageEnabled
+                };
+                await this.showRecommendationBlock(locationSettings);
             }
         }
 
         async showRecommendations() {
-            if (!this.storeId || !this.productId) return;
+            const productId = this.sdk.getCurrentProductId();
+            if (!productId) return;
+
+            if (this.upsellBlockShown) return;
 
             try {
-                const url = `${CONFIG.apiBase}/recommendations/${this.storeId}/${this.productId}`;
-                const response = await this.fetchWithRetry(url);
-                const data = await response.json();
-
-                if (data.success && data.recommendations && data.recommendations.length > 0) {
-                    const enriched = await this.enrichRecommendationsWithOptions(data.recommendations);
+                const recommendations = await this.api.getProductRecommendations(productId, 'upsells');
+                if (recommendations && recommendations.length > 0) {
+                    const enriched = await this.api.enrichRecommendationsWithOptions(recommendations);
                     this.renderRecommendations(enriched);
                 }
             } catch (error) {
-                // Silently handle errors
+                console.error('[RECOM] Error getting upsell recommendations:', error);
             }
         }
 
-        async enrichRecommendationsWithOptions(recommendations) {
+        async showCartRecommendations(upsellsEnabled, crossSellsEnabled) {
+            
             try {
-                const results = await Promise.all(recommendations.map(async (p) => {
-                    try {
-                        const url = `${CONFIG.apiBase}/product/${this.storeId}/${p.ecwid_product_id}`;
-                        const resp = await this.fetchWithRetry(url);
-                        const json = await resp.json();
-                        if (json.success && json.product) {
-                            return { ...p, options: json.product.options || [] };
-                        }
-                    } catch (_) {}
-                    return p;
-                }));
-                return results;
-            } catch (e) {
-                return recommendations;
-            }
-        }
+                const cartItems = await this.sdk.getCartItems();
+                
+                if (!cartItems || cartItems.length === 0) {
+                    return;
+                }
 
-        async fetchWithRetry(url, options = {}) {
-            try {
-                const response = await fetch(url, {
-                    ...options,
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...options.headers
+                const mostExpensiveProduct = this.findMostExpensiveProduct(cartItems);
+
+                if (upsellsEnabled) {
+                    const productId = mostExpensiveProduct.product.id;
+                    const recommendations = await this.api.getProductRecommendations(productId, 'upsells');
+                    
+                    if (recommendations && recommendations.length > 0) {
+                        const enriched = await this.api.enrichRecommendationsWithOptions(recommendations);
+                        this.renderRecommendations(enriched);
                     }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
                 }
 
-                return response;
+                if (crossSellsEnabled) {
+                    const productId = mostExpensiveProduct.product.id;
+                    const recommendations = await this.api.getProductRecommendations(productId, 'crosssells');
+                    
+                    if (recommendations && recommendations.length > 0) {
+                        const enriched = await this.api.enrichRecommendationsWithOptions(recommendations);
+                        this.renderCrossSellRecommendations(enriched);
+                    }
+                }
             } catch (error) {
-                if (this.retryCount < CONFIG.maxRetries) {
-                    this.retryCount++;
-                    await new Promise(resolve => setTimeout(resolve, CONFIG.retryDelay));
-                    return this.fetchWithRetry(url, options);
-                }
-                throw error;
+                console.error('[RECOM] Error getting cart recommendations:', error);
             }
+        }
+
+        async showCrossSellRecommendations() {
+            if (this.crossSellBlockShown) return;
+
+            try {
+                let productId = this.sdk.getCurrentProductId();
+                
+                if (!productId) {
+                    const cartItems = await this.sdk.getCartItems();
+                    if (!cartItems || cartItems.length === 0) return;
+                    const mostExpensiveProduct = this.findMostExpensiveProduct(cartItems);
+                    productId = mostExpensiveProduct.product.id;
+                }
+                
+                const recommendations = await this.api.getProductRecommendations(productId, 'crosssells');
+                if (recommendations && recommendations.length > 0) {
+                    const enriched = await this.api.enrichRecommendationsWithOptions(recommendations);
+                    this.renderCrossSellRecommendations(enriched);
+                }
+            } catch (error) {
+                console.error('[RECOM] Error getting cross-sell recommendations:', error);
+            }
+        }
+
+        async showRecommendationBlock(locationSettings) {
+            const pageType = this.sdk.getCurrentPageType();
+            let categoryId = null;
+
+
+            if (pageType === 'ORDER_CONFIRMATION') {
+                if (locationSettings.thankYouPageEnabled) {
+                    categoryId = null; // Force fallback
+                } else {
+                    return; // Don't show recommendations if disabled
+                }
+            } else if (pageType === 'CATEGORY' && locationSettings.categoryPageEnabled) {
+                categoryId = this.sdk.getCurrentCategoryId();
+                if (!categoryId || categoryId === 0) {
+                    categoryId = null;
+                }
+            } else if (pageType === 'CATEGORY') {
+                return;
+            } else if (pageType === 'PRODUCT' && locationSettings.productPageEnabled) {
+                const productId = this.sdk.getCurrentProductId();
+                if (productId) {
+                    try {
+                        const productData = await this.api.getProduct(productId);
+                        if (productData.categoryIds && productData.categoryIds.length > 0) {
+                            categoryId = productData.categoryIds[0];
+                        } else if (productData.defaultCategoryId && productData.defaultCategoryId !== 0) {
+                            categoryId = productData.defaultCategoryId;
+                        }
+                    } catch (error) {
+                        console.error('[RECOM] Error getting product data:', error);
+                    }
+                }
+            } else {
+                return; // Don't show recommendations for unhandled page types
+            }
+
+            if (!categoryId) {
+                try {
+                    const products = await this.api.getAllProducts();
+                    if (products && products.length > 0) {
+                        const enriched = await this.api.enrichRecommendationsWithOptions(products);
+                        this.renderRecommendationBlock(enriched);
+                        this.recommendationBlockShown = true;
+                    }
+                } catch (error) {
+                    console.error('[RECOM] Error in fallback:', error);
+                }
+                return;
+            }
+
+            try {
+                const recommendations = await this.api.getCategoryRecommendations(categoryId);
+                if (recommendations && recommendations.length > 0) {
+                    const enriched = await this.api.enrichRecommendationsWithOptions(recommendations);
+                    this.renderRecommendationBlock(enriched);
+                    this.recommendationBlockShown = true;
+                }
+            } catch (error) {
+                console.error('[RECOM] Error getting category recommendations:', error);
+            }
+        }
+
+        findMostExpensiveProduct(cartItems) {
+            
+            let mostExpensive = null;
+            let highestPrice = 0;
+
+            cartItems.forEach(item => {
+                
+                // Handle different cart item structures
+                let price = 0;
+                if (item.price) {
+                    price = parseFloat(item.price) || 0;
+                } else if (item.product && item.product.price) {
+                    price = parseFloat(item.product.price) || 0;
+                }
+                
+                
+                if (price > highestPrice) {
+                    highestPrice = price;
+                    mostExpensive = item;
+                }
+            });
+
+            // If no price was found, just return the first item
+            if (!mostExpensive && cartItems.length > 0) {
+                mostExpensive = cartItems[0];
+            }
+
+            return mostExpensive;
         }
 
         renderRecommendations(recommendations) {
-            const block = this.createRecommendationBlock();
+            if (this.upsellBlockShown) return;
+            
+
+            // Create the recommendation block
+            const block = this.createRecommendationBlock(recommendations, 'You might also like');
+            
+            // Add recommendations to the block
             const grid = block.querySelector('.recom-grid');
             
             recommendations.forEach((product, index) => {
@@ -173,15 +806,64 @@
                 grid.appendChild(item);
             });
 
-            this.insertRecommendationBlock(block);
+            // Insert the block into the page
+            this.insertRecommendationBlock(block, 'upsells');
+            this.upsellBlockShown = true;
         }
 
-        createRecommendationBlock() {
+        renderCrossSellRecommendations(recommendations) {
+            if (this.crossSellBlockShown) return;
+            
+
+            // Create the recommendation block
+            const block = this.createRecommendationBlock(recommendations, 'Frequently bought together');
+            
+            // Add recommendations to the block
+            const grid = block.querySelector('.recom-grid');
+            
+            // Populate the grid with recommendation items
+            recommendations.forEach((product, index) => {
+                const item = this.createRecommendationItem(product);
+                grid.appendChild(item);
+            });
+            
+            this.insertRecommendationBlock(block, 'crosssells');
+            this.crossSellBlockShown = true;
+        }
+
+        renderRecommendationBlock(recommendations) {
+            if (this.recommendationBlockShown) return;
+            
+
+            // Create the recommendation block
+            const block = this.createRecommendationBlock(recommendations, 'Recommended products');
+            
+            // Add recommendations to the block
+            const grid = block.querySelector('.recom-grid');
+            
+            recommendations.forEach((product, index) => {
+                const item = this.createRecommendationItem(product);
+                grid.appendChild(item);
+            });
+
+            // Insert the block into the page
+            this.insertRecommendationBlock(block, 'recommendations');
+            this.recommendationBlockShown = true;
+        }
+
+        createRecommendationBlock(recommendations, title) {
             const block = document.createElement('div');
             block.className = 'recom-block';
+            
+            // Add page type data attribute for CSS targeting
+            const pageType = this.sdk.getCurrentPageType();
+            if (pageType) {
+                block.setAttribute('data-page-type', pageType);
+            }
+            
             block.innerHTML = `
                 <div class="recom-header">
-                    <h3 class="recom-title">You might also like</h3>
+                    <h3 class="recom-title">${title}</h3>
                     <div class="recom-divider"></div>
                 </div>
                 <div class="recom-grid"></div>
@@ -189,10 +871,13 @@
             return block;
         }
 
+
         createRecommendationItem(product) {
+            
             const item = document.createElement('div');
             item.className = 'recom-item';
             
+            // Use correct field names from API response
             const productId = product.ecwid_product_id;
 
             let imageHtml = '';
@@ -218,10 +903,10 @@
                 </a>
             `;
 
+            // Render option selectors according to option type (inline)
             const basePrice = (typeof product.price === 'number') ? product.price : parseFloat(product.price || '0');
             let optionsHtml = '';
             const hasOptions = Array.isArray(product.options) && product.options.length > 0;
-            
             if (hasOptions) {
                 optionsHtml = '<div class="recom-options collapsed">\n  <div class="recom-options-header">Select options</div>\n  <div class="recom-options-body">';
                 product.options.forEach((opt, idx) => {
@@ -232,15 +917,17 @@
                         ? opt.values
                         : (Array.isArray(opt.choices) ? opt.choices : []);
 
+                    // Normalize values to objects { text, value, priceModifier, priceModifierType }
                     const normalized = values.map(v => {
                         if (typeof v === 'string') return { text: v, value: v };
                         return {
                             text: v.text,
-                            value: v.value || v.text,
+                            value: v.value || v.text, // Use text as value if value is undefined
                             priceModifier: (typeof v.priceModifier === 'number') ? v.priceModifier : parseFloat(v.priceModifier || '0') || 0,
-                            priceModifierType: (v.priceModifierType || '').toUpperCase()
+                            priceModifierType: (v.priceModifierType || '').toUpperCase() // 'ABSOLUTE' | 'PERCENT'
                         };
                     });
+
 
                     if (optionType === 'RADIO' || optionType === 'RADIO_BUTTONS') {
                         const nameAttr = `recom-option-${productId}-${idx}`;
@@ -281,6 +968,7 @@
                             <input type="date" class="recom-option-input recom-option-date" data-option-name="${optionName}" ${isRequired ? 'data-required="true"' : ''}>
                         `;
                     } else {
+                        // Default to SELECT
                         const placeholder = `<option value="" selected>${isRequired ? 'Select...' : '—'}</option>`;
                         const optionsMarkup = placeholder + normalized.map(nv => `
                             <option value="${nv.value}" data-modifier-type="${nv.priceModifierType}" data-modifier-value="${isNaN(nv.priceModifier) ? '' : nv.priceModifier}">${nv.text}</option>
@@ -298,19 +986,19 @@
             const cartButtonHtml = `<button class="recom-cart-btn" onclick="event.preventDefault(); event.stopPropagation(); window['recomEcwidRecommendationBlock'].addToCartFromItem(this)">Add to cart</button>`;
 
             item.innerHTML = `
-                <div class="recom-content-wrapper">
                     ${linkHtml}
                     ${hasOptions ? optionsHtml : ''}
-                </div>
                 ${cartButtonHtml}
             `;
 
+            // Store the product data on the item element for later use
             try {
                 item.setAttribute('data-product-data', JSON.stringify(product));
             } catch (error) {
-                // Silently handle errors
+                console.error('[RECOM] Error storing product data on item', error);
             }
 
+            // Attach SDK navigation to product page
             const linkEl = item.querySelector('.recom-link');
             if (linkEl && productId) {
                 linkEl.addEventListener('click', (e) => {
@@ -322,6 +1010,7 @@
                 }, { passive: false });
             }
 
+            // Toggle options roll-down
             const optionsRoot = item.querySelector('.recom-options');
             const optionsHeader = item.querySelector('.recom-options-header');
             if (optionsHeader && optionsRoot) {
@@ -331,6 +1020,7 @@
                 });
             }
 
+            // After rendering, attach option change listeners to update price
             this.attachOptionListenersAndPrice(item, basePrice);
             return item;
         }
@@ -359,295 +1049,223 @@
                     total += val;
                 }
             };
-            
+            // Selects
             containerEl.querySelectorAll('select.recom-option-select').forEach(sel => {
                 const opt = sel.options[sel.selectedIndex];
                 if (!opt) return;
                 applyModifier(opt.dataset.modifierType, opt.dataset.modifierValue);
             });
-            
+            // Radios
             containerEl.querySelectorAll('input.recom-option-input[type="radio"]').forEach(r => {
                 if (r.checked) applyModifier(r.dataset.modifierType, r.dataset.modifierValue);
             });
-            
+            // Checkboxes
             containerEl.querySelectorAll('input.recom-option-input[type="checkbox"]').forEach(c => {
                 if (c.checked) applyModifier(c.dataset.modifierType, c.dataset.modifierValue);
             });
-            
             return total;
         }
 
-        getProductDataFromItem(itemEl) {
-            try {
-                const productDataStr = itemEl.getAttribute('data-product-data');
-                if (productDataStr) {
-                    return JSON.parse(productDataStr);
+        insertRecommendationBlock(block, type) {
+            
+            const pageType = this.sdk.getCurrentPageType();
+            
+            // Look for footer elements first - insert before footer on all pages
+            const footer = document.querySelector('footer, .footer, .ec-footer, .ecwid-footer');
+            
+            // Look for continue shopping button (specific to thank you page)
+            const continueShoppingBtn = document.querySelector('a[href*="continue"], .continue-shopping, [data-testid*="continue"]');
+            
+            let inserted = false;
+            
+            // Try to insert before footer on all pages
+            if (footer) {
+                footer.parentNode.insertBefore(block, footer);
+                inserted = true;
+            } 
+            // For thank you page, try to insert after continue shopping button if no footer
+            else if (pageType === 'ORDER_CONFIRMATION' && continueShoppingBtn) {
+                continueShoppingBtn.parentNode.insertBefore(block, continueShoppingBtn.nextSibling);
+                inserted = true;
+            }
+            // Fallback insertion strategies
+            else {
+                const insertionPoints = [
+                    document.querySelector('.ec-wrapper'),
+                    document.querySelector('.ecwid-product-details'),
+                    document.querySelector('.ecwid-product'),
+                    document.querySelector('#ecwid-product'),
+                    document.querySelector('.product-details'),
+                    document.querySelector('.product-info'),
+                    document.querySelector('main'),
+                    document.querySelector('.content'),
+                    document.body
+                ];
+
+                for (const point of insertionPoints) {
+                    if (point) {
+                        point.appendChild(block);
+                        inserted = true;
+                        break;
+                    }
                 }
-                return null;
-            } catch (error) {
-                return null;
+            }
+            
+            if (inserted) {
+                
+                // Log the complete HTML after insertion
+                
+                // Log detailed structure of each item
+                const items = block.querySelectorAll('.recom-item');
+                items.forEach((item, index) => {
+                    // Items are now properly structured
+                });
             }
         }
 
-        addToCartFromItem(buttonEl) {
-            try {
-                const itemEl = buttonEl.closest('.recom-item');
-                if (!itemEl) {
-                    console.log('[DEBUG] No item element found');
-                    return;
-                }
-                
-                const linkEl = itemEl.querySelector('.recom-link');
-                const productIdAttr = linkEl?.getAttribute('data-productid');
-                const productId = productIdAttr ? parseInt(productIdAttr) : null;
-                if (!productId) {
-                    console.log('[DEBUG] No product ID found');
-                    return;
-                }
+        addToCartFromItem(button) {
+            const itemElement = button.closest('.recom-item');
+            if (!itemElement) return;
 
-                const productData = this.getProductDataFromItem(itemEl);
-                if (!productData) {
-                    console.log('[DEBUG] No product data found');
-                    return;
-                }
-                
-                console.log('[DEBUG] Starting add to cart', { productId, productName: productData.name });
+            const productData = JSON.parse(itemElement.dataset.productData);
+            const productId = productData.ecwid_product_id;
+            const hasOptions = Array.isArray(productData.options) && productData.options.length > 0;
 
-                const selectedOptions = [];
-                const missingRequired = [];
+            // Check if product has options
+            if (hasOptions) {
+                const optionsContainer = itemElement.querySelector('.recom-options');
+                // Validate ALL options - every option must be selected
+                const allOptionInputs = itemElement.querySelectorAll('.recom-option-input');
+                let isValid = true;
+                const invalidInputs = [];
+                const processedGroups = new Set();
 
-                itemEl.querySelectorAll('select.recom-option-select').forEach(sel => {
-                    const uiOptionName = sel.getAttribute('data-option-name') || '';
-                    const isRequired = sel.hasAttribute('required') || sel.dataset.required === 'true';
-
-                    if (uiOptionName && sel.value) {
-                        const productOption = productData.options?.find(opt =>
-                            opt.name?.toLowerCase() === uiOptionName.toLowerCase()
-                        );
-
-                        if (productOption) {
-                            const optionToAdd = { name: productOption.name, value: sel.value };
-                            selectedOptions.push(optionToAdd);
-                        }
-                    } else if (isRequired) {
-                        missingRequired.push(sel);
-                    }
-                });
-
-                const radioGroups = new Set();
-                itemEl.querySelectorAll('input.recom-option-input[type="radio"]').forEach(r => {
-                    if (r.name) radioGroups.add(r.name);
-                });
-                
-                radioGroups.forEach(group => {
-                    const checked = itemEl.querySelector(`input.recom-option-input[type="radio"][name="${group}"]:checked`);
-                    
-                    if (checked) {
-                        const uiOptionName = checked.getAttribute('data-option-name') || '';
-                        if (uiOptionName) {
-                            const productOption = productData.options?.find(opt =>
-                                opt.name?.toLowerCase() === uiOptionName.toLowerCase()
-                            );
-
-                            if (productOption) {
-                                const optionToAdd = { name: productOption.name, value: checked.value };
-                                selectedOptions.push(optionToAdd);
-                            }
-                        }
-                    } else {
-                        const anyInGroup = itemEl.querySelector(`input.recom-option-input[type=radio][name="${group}"]`);
-                        if (anyInGroup && (anyInGroup.hasAttribute('required') || anyInGroup.dataset.required === 'true')) {
-                            missingRequired.push(anyInGroup.closest('.recom-option-line') || anyInGroup);
-                        }
-                    }
-                });
-
-                itemEl.querySelectorAll('input.recom-option-input[type="checkbox"]').forEach(c => {
-                    if (c.checked) {
-                        const uiOptionName = c.getAttribute('data-option-name') || '';
-                        if (uiOptionName) {
-                            const productOption = productData.options?.find(opt =>
-                                opt.name?.toLowerCase() === uiOptionName.toLowerCase()
-                            );
-
-                            if (productOption) {
-                                const optionToAdd = { name: productOption.name, value: c.value };
-                                selectedOptions.push(optionToAdd);
-                            }
-                        }
-                    } else if (c.hasAttribute('required') || c.dataset.required === 'true') {
-                        missingRequired.push(c.closest('.recom-option-line') || c);
-                    }
-                });
-
-                itemEl.querySelectorAll('.recom-option-text, .recom-option-date').forEach(inp => {
-                    const uiOptionName = inp.getAttribute('data-option-name') || '';
-                    const value = inp.value;
-                    const isRequired = inp.hasAttribute('required') || inp.dataset.required === 'true';
-                    
-                    if (uiOptionName && value) {
-                        const productOption = productData.options?.find(opt =>
-                            opt.name?.toLowerCase() === uiOptionName.toLowerCase()
-                        );
-
-                        if (productOption) {
-                            const optionToAdd = { name: productOption.name, value };
-                            selectedOptions.push(optionToAdd);
-                        }
-                    } else if (isRequired) {
-                        missingRequired.push(inp);
-                    }
-                });
-
-                const optionsRoot = itemEl.querySelector('.recom-options');
-                if (optionsRoot) {
-                    optionsRoot.querySelectorAll('select.recom-option-select').forEach(sel => {
-                        if (!sel.value && !missingRequired.includes(sel)) missingRequired.push(sel);
-                    });
-                    
-                    const allRadioGroups = new Set();
-                    optionsRoot.querySelectorAll('input.recom-option-input[type="radio"]').forEach(r => { if (r.name) allRadioGroups.add(r.name); });
-                    allRadioGroups.forEach(group => {
-                        const checked = optionsRoot.querySelector(`input.recom-option-input[type="radio"][name="${group}"]:checked`);
-                        if (!checked) {
-                            const anyInGroup = optionsRoot.querySelector(`input.recom-option-input[type=radio][name="${group}"]`);
-                            if (anyInGroup && !missingRequired.includes(anyInGroup)) missingRequired.push(anyInGroup.closest('.recom-option-line') || anyInGroup);
-                        }
-                    });
-                    
-                    const checkboxByName = new Map();
-                    optionsRoot.querySelectorAll('input.recom-option-input[type="checkbox"]').forEach(c => {
-                        const name = c.getAttribute('data-option-name') || '';
-                        if (!name) return;
-                        if (!checkboxByName.has(name)) checkboxByName.set(name, []);
-                        checkboxByName.get(name).push(c);
-                    });
-                    checkboxByName.forEach(list => {
-                        if (!list.some(c => c.checked)) {
-                            const any = list[0];
-                            if (any && !missingRequired.includes(any)) missingRequired.push(any.closest('.recom-option-line') || any);
-                        }
-                    });
-                    
-                    optionsRoot.querySelectorAll('.recom-option-text, .recom-option-date').forEach(inp => {
-                        if (!inp.value && !missingRequired.includes(inp)) missingRequired.push(inp);
-                    });
-                }
-
-                if (missingRequired.length > 0) {
-                    if (optionsRoot && optionsRoot.classList.contains('collapsed')) {
-                        optionsRoot.classList.remove('collapsed');
-                    }
-                    missingRequired.forEach(el => {
-                        el.classList.add('recom-option-blink');
-                        setTimeout(() => el.classList.remove('recom-option-blink'), 1200);
-                    });
-                    return;
-                }
-
-                console.log('[DEBUG] Selected options:', selectedOptions);
-                console.log('[DEBUG] Missing required:', missingRequired.length);
-
-                if (window.Ecwid && window.Ecwid.Cart) {
-                    try {
-                        if (selectedOptions.length > 0) {
-                            const optionsObject = {};
-                            selectedOptions.forEach(option => {
-                                optionsObject[option.name] = option.value;
-                            });
-                            
-                            console.log('[DEBUG] Adding to cart with options:', { id: productId, options: optionsObject });
-                            window.Ecwid.Cart.addProduct({ id: productId, options: optionsObject });
-                        } else {
-                            console.log('[DEBUG] Adding to cart without options:', productId);
-                            window.Ecwid.Cart.addProduct(productId);
-                        }
-                        console.log('[DEBUG] Product added to cart successfully');
+                allOptionInputs.forEach(input => {
+                    if (input.type === 'radio') {
+                        const name = input.name;
+                        if (processedGroups.has(name)) return; // Skip if we already processed this radio group
+                        processedGroups.add(name);
                         
-                        // Add visual feedback
-                        this.showCartSuccessFeedback(buttonEl);
-                    } catch (cartError) {
-                        console.log('[DEBUG] Error adding to cart:', cartError);
+                        const anyChecked = itemElement.querySelector(`input[name="${name}"]:checked`);
+                        if (!anyChecked) {
+                            isValid = false;
+                            // Add the first input of this group to invalidInputs for highlighting
+                            const firstInput = itemElement.querySelector(`input[name="${name}"]`);
+                            if (firstInput) invalidInputs.push(firstInput);
+                        }
+                    } else if (input.type === 'checkbox') {
+                        const optionName = input.dataset.optionName;
+                        if (processedGroups.has(optionName)) return; // Skip if we already processed this checkbox group
+                        processedGroups.add(optionName);
+                        
+                        const anyChecked = itemElement.querySelector(`input[data-option-name="${optionName}"]:checked`);
+                        if (!anyChecked) {
+                            isValid = false;
+                            // Add the first checkbox of this group to invalidInputs for highlighting
+                            const firstCheckbox = itemElement.querySelector(`input[data-option-name="${optionName}"]`);
+                            if (firstCheckbox) invalidInputs.push(firstCheckbox);
+                        }
+                    } else if (input.tagName === 'SELECT') {
+                        if (!input.value) {
+                            isValid = false;
+                            invalidInputs.push(input);
+                        }
+                    } else if (input.tagName === 'INPUT' || input.tagName === 'TEXTAREA') {
+                        if (!input.value.trim()) {
+                            isValid = false;
+                            invalidInputs.push(input);
+                        }
                     }
-                } else {
-                    console.log('[DEBUG] Ecwid.Cart not available');
-                }
-            } catch (e) {
-                // Silently handle errors
-            }
-        }
+                });
 
-        showCartSuccessFeedback(buttonEl) {
-            // Store original text
-            const originalText = buttonEl.textContent;
+                // If invalid, expand options and highlight invalid fields
+                if (!isValid) {
+                    // Expand options if collapsed
+                    if (optionsContainer && optionsContainer.classList.contains('collapsed')) {
+                        optionsContainer.classList.remove('collapsed');
+                    }
+
+                    // Apply red border + shake animation
+                    invalidInputs.forEach(input => {
+                        input.classList.add('recom-option-blink');
+                        setTimeout(() => input.classList.remove('recom-option-blink'), 600);
+                    });
+
+                    return; // Don't add to cart
+                }
+            }
+
+            // Collect selected options
+            let options = null;
+            const optionSelects = itemElement.querySelectorAll('.recom-option-select');
+            const optionRadios = itemElement.querySelectorAll('input[type="radio"]:checked');
+            const optionCheckboxes = itemElement.querySelectorAll('input[type="checkbox"]:checked');
+            const optionTexts = itemElement.querySelectorAll('.recom-option-text');
+            const optionDates = itemElement.querySelectorAll('.recom-option-date');
+
+            if (optionSelects.length > 0 || optionRadios.length > 0 || optionCheckboxes.length > 0 || optionTexts.length > 0 || optionDates.length > 0) {
+                options = {};
+                
+                optionSelects.forEach(select => {
+                    if (select.value) {
+                        options[select.dataset.optionName] = select.value;
+                    }
+                });
+                
+                optionRadios.forEach(radio => {
+                    options[radio.dataset.optionName] = radio.value;
+                });
+                
+                optionCheckboxes.forEach(checkbox => {
+                    if (!options[checkbox.dataset.optionName]) {
+                        options[checkbox.dataset.optionName] = [];
+                    }
+                    options[checkbox.dataset.optionName].push(checkbox.value);
+                });
+                
+                optionTexts.forEach(text => {
+                    if (text.value.trim()) {
+                        options[text.dataset.optionName] = text.value.trim();
+                    }
+                });
+                
+                optionDates.forEach(date => {
+                    if (date.value) {
+                        options[date.dataset.optionName] = date.value;
+                    }
+                });
+            }
+
+            // Add to cart
+            this.sdk.addToCart(productId, options);
+
+            // Visual feedback - change button to green "Added" for 3 seconds
+            const originalText = button.textContent;
+            const originalClass = button.className;
             
-            // Add success class immediately (no blinking)
-            buttonEl.classList.add('recom-cart-btn-success');
+            button.textContent = 'Added';
+            button.classList.add('recom-cart-btn-success');
             
-            // Change text to "Added!"
-            buttonEl.textContent = 'Added!';
-            
-            // Revert text and styling after 3 seconds
             setTimeout(() => {
-                buttonEl.textContent = originalText;
-                buttonEl.classList.remove('recom-cart-btn-success');
+                button.textContent = originalText;
+                button.className = originalClass;
             }, 3000);
         }
 
-        navigateToProduct(productId, productUrl) {
-            if (productUrl) {
-                window.location.href = productUrl;
-                return;
-            }
-            
-            if (productId && window.Ecwid && window.Ecwid.openPage) {
-                window.Ecwid.openPage('product', {'id': parseInt(productId)});
-            }
-        }
-
-        addToCart(productId) {
-            if (window.Ecwid && window.Ecwid.Cart) {
-                window.Ecwid.Cart.addProduct(productId);
-            }
-        }
-
-        clearExistingRecommendations() {
-            const existingBlocks = document.querySelectorAll('.recom-block');
-            existingBlocks.forEach(block => block.remove());
-        }
-
-        insertRecommendationBlock(block) {
-            const insertionPoints = [
-                document.querySelector('.ecwid-product-details'),
-                document.querySelector('.ecwid-product'),
-                document.querySelector('#ecwid-product'),
-                document.querySelector('.product-details'),
-                document.querySelector('.product-info'),
-                document.querySelector('main'),
-                document.querySelector('.content'),
-                document.body
-            ];
-
-            let insertionPoint = null;
-            for (const point of insertionPoints) {
-                if (point) {
-                    insertionPoint = point;
-                    break;
-                }
-            }
-
-            if (insertionPoint) {
-                insertionPoint.appendChild(block);
-            }
+        openProductPage(productId) {
+            this.sdk.openProductPage(productId);
         }
     }
 
+    // Initialize the app
+
+    // Try immediate initialization first
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            window['recomEcwidRecommendationBlock'] = new EcwidRecomRecommendationApp();
+        window.addEventListener('DOMContentLoaded', () => {
+            window.recomEcwidRecommendationBlock = new RecomApp();
         });
     } else {
-        window['recomEcwidRecommendationBlock'] = new EcwidRecomRecommendationApp();
+        window.recomEcwidRecommendationBlock = new RecomApp();
     }
 
 })();
