@@ -100,13 +100,13 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://connect.facebook.net", "https://www.googletagmanager.com", "https://app.ecwid.com", "https://*.ecwid.com"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://*.ecwid.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://connect.facebook.net", "https://www.googletagmanager.com", "https://app.ecwid.com", "https://*.ecwid.com", "https://*.cloudfront.net", "https://djqizrxa6f10j.cloudfront.net"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://*.ecwid.com", "https://fonts.googleapis.com"],
       imgSrc: ["'self'", "data:", "https://*.ecwid.com", "https://images-cdn.ecwid.com"],
-      connectSrc: ["'self'", "https://*.ecwid.com", "https://ec.1nax.app"],
+      connectSrc: ["'self'", "https://*.ecwid.com", "https://ec.1nax.app", "https://*.cloudfront.net"],
       frameSrc: ["'self'", "https://app.ecwid.com", "https://*.ecwid.com"],
       frameAncestors: ["'self'", "https://app.ecwid.com", "https://*.ecwid.com", "https://*.1nax.app"],
-      fontSrc: ["'self'", "https://*.ecwid.com"],
+      fontSrc: ["'self'", "https://*.ecwid.com", "https://fonts.gstatic.com"],
     },
   },
   hsts: {
