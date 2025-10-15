@@ -1,4 +1,4 @@
-import logger from './logger.js';
+// Removed logger import
 
 /**
  * Store Detection Utility
@@ -8,10 +8,7 @@ import logger from './logger.js';
 export const detectStoreId = async () => {
   let storeId = null;
   
-  logger.debug('Starting store ID detection', {
-    url: window.location.href,
-    searchParams: window.location.search
-  });
+  // Removed logger call
 
   // ALWAYS process payload first to save access token to database
   const urlParams = new URLSearchParams(window.location.search);
@@ -19,7 +16,7 @@ export const detectStoreId = async () => {
   
   if (payload) {
     try {
-      logger.info('Processing Ecwid payload');
+      // Removed logger.info('Processing Ecwid payload');
       const response = await fetch('/api/ecwid/decode-payload', {
         method: 'POST',
         headers: {
@@ -33,14 +30,14 @@ export const detectStoreId = async () => {
         if (result.success && result.data.store_id) {
           storeId = result.data.store_id;
           localStorage.setItem('ecwid_store_id', storeId);
-          logger.storeDetection('payload', storeId);
+          // Removed logger.storeDetection('payload', storeId);
           return storeId;
         }
       } else {
-        logger.warn('Payload processing failed', { status: response.status });
+        // Removed logger.warn('Payload processing failed', { status: response.status });
       }
     } catch (error) {
-      logger.error('Payload processing error', error);
+      // Removed logger.error('Payload processing error', error);
       // Continue to other methods if payload processing fails
     }
   }
@@ -51,11 +48,11 @@ export const detectStoreId = async () => {
       storeId = window.Ecwid.getStoreId();
       if (storeId) {
         localStorage.setItem('ecwid_store_id', storeId);
-        logger.storeDetection('Ecwid.getStoreId()', storeId);
+        // Removed logger.storeDetection('Ecwid.getStoreId()', storeId);
         return storeId;
       }
     } catch (e) {
-      logger.warn('Ecwid.getStoreId() error', e);
+      // Removed logger.warn('Ecwid.getStoreId() error', e);
     }
   }
 
@@ -68,7 +65,7 @@ export const detectStoreId = async () => {
           if (settings && settings.storeId) {
             storeId = settings.storeId;
             localStorage.setItem('ecwid_store_id', storeId);
-            logger.storeDetection('EcwidApp.getSettings()', storeId);
+            // Removed logger.storeDetection('EcwidApp.getSettings()', storeId);
             resolve(storeId);
           } else {
             resolve(null);
@@ -76,14 +73,14 @@ export const detectStoreId = async () => {
         });
       });
     } catch (e) {
-      logger.warn('EcwidApp.getSettings() error', e);
+      // Removed logger.warn('EcwidApp.getSettings() error', e);
     }
   }
 
   // Method 3: From localStorage (fallback for already configured stores)
   storeId = localStorage.getItem('ecwid_store_id');
   if (storeId) {
-    logger.storeDetection('localStorage', storeId);
+    // Removed logger.storeDetection('localStorage', storeId);
     return storeId;
   }
 
@@ -91,11 +88,11 @@ export const detectStoreId = async () => {
   if (window.ecwid_store_id) {
     storeId = window.ecwid_store_id;
     localStorage.setItem('ecwid_store_id', storeId);
-    logger.storeDetection('window.ecwid_store_id', storeId);
+    // Removed logger.storeDetection('window.ecwid_store_id', storeId);
     return storeId;
   }
 
-  logger.warn('No store ID found using proper SDK methods');
+  // Removed logger.warn('No store ID found using proper SDK methods');
   return null;
 };
 

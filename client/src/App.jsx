@@ -6,7 +6,7 @@ import Settings from './pages/Settings';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import RecommendationSettings from './components/RecommendationSettings';
-import logger from './utils/logger';
+// Removed logger import
 
 const AppContent = () => {
   const { isLoaded, storeId, error } = useEcwid();
@@ -17,18 +17,18 @@ const AppContent = () => {
   useEffect(() => {
     // Check if store is already configured in localStorage
     const configured = localStorage.getItem('ecwid_store_configured');
-    logger.componentLifecycle('App', 'checking store configuration', { configured, storeId });
+    // Removed logger call
     
     if (configured === 'true') {
-      logger.info('Store is already configured');
+      // Removed logger call
       setStoreConfigured(true);
     } else {
-      logger.info('Store not configured, will show setup');
+      // Removed logger call
     }
   }, [storeId]); // Add storeId as dependency
 
   const handleStoreSetupComplete = (store) => {
-    logger.info('Store setup completed', { store });
+    // Removed logger call
     setStoreInfo(store);
     setStoreConfigured(true);
     localStorage.setItem('ecwid_store_configured', 'true');
@@ -36,7 +36,7 @@ const AppContent = () => {
 
   // Show loading while Ecwid context is initializing
   if (!isLoaded) {
-    logger.componentLifecycle('App', 'showing loading screen (Ecwid context not loaded)');
+    // Removed logger call
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="spinner w-8 h-8"></div>
@@ -47,17 +47,17 @@ const AppContent = () => {
 
   // Show store setup if not configured
   if (!storeConfigured) {
-    logger.componentLifecycle('App', 'showing store setup (store not configured)', { storeConfigured, storeId });
+    // Removed logger call
     return <StoreSetup onSetupComplete={handleStoreSetupComplete} />;
   }
 
   // Show main app if configured
-  logger.componentLifecycle('App', 'showing main app (store configured)', { storeConfigured, storeId });
+  // Removed logger call
   
   try {
-    logger.info('Rendering main app components');
+    // Removed logger call
     
-    logger.info('About to render main app');
+    // Removed logger call
     
     return (
       <div className="min-h-screen bg-gray-50">
@@ -69,7 +69,7 @@ const AppContent = () => {
       </div>
     );
   } catch (error) {
-    logger.error('Error rendering main app', error);
+    // Removed logger call
     return (
       <div className="flex items-center justify-center h-screen">
         <div className="text-center">
@@ -82,7 +82,7 @@ const AppContent = () => {
 };
 
 const App = () => {
-  logger.info('App component rendering');
+  // Removed logger call
   
   // Add error boundary
   try {
@@ -92,7 +92,7 @@ const App = () => {
       </EcwidProvider>
     );
   } catch (error) {
-    logger.error('App component error', error);
+    // Removed logger call
     return (
       <div style={{
         position: 'fixed',

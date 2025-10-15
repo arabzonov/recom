@@ -42,7 +42,7 @@
 
         log(message, data = null) {
             if (CONFIG.debug) {
-                console.log(`[EcwidRecommendations] ${message}`, data);
+                // Removed console.log(`[EcwidRecommendations] ${message}`, data);
             }
         }
 

@@ -65,7 +65,7 @@
                         resolve();
                 });
             } else {
-                    console.warn('[SDK] Ecwid API not available');
+                    // Removed console.warn('[SDK] Ecwid API not available');
                     resolve();
                 }
             });
@@ -103,7 +103,7 @@
                     this.pageLoadCallbacks.forEach(cb => cb(page));
                 });
                     } else {
-                console.warn('[SDK] OnPageLoaded not available');
+                // Removed console.warn('[SDK] OnPageLoaded not available');
             }
         }
 
@@ -154,7 +154,7 @@
         async getCartItems() {
             
             if (!this.isInitialized || !window.Ecwid || !window.Ecwid.Cart) {
-                console.warn('[SDK] Cannot get cart items - SDK not initialized or Cart API not available');
+                // Removed console.warn('[SDK] Cannot get cart items - SDK not initialized or Cart API not available');
                 return [];
             }
 
@@ -174,9 +174,9 @@
                     });
                 }
                 
-                console.warn('[SDK] No cart methods available');
+                // Removed console.warn('[SDK] No cart methods available');
             } catch (error) {
-                console.error('[SDK] Error getting cart items:', error);
+                // Removed console.error('[SDK] Error getting cart items:', error);
             }
             
             return [];
@@ -191,7 +191,7 @@
         addToCart(productId, options = null) {
             
             if (!this.isInitialized || !window.Ecwid || !window.Ecwid.Cart) {
-                console.warn('[SDK] Cannot add to cart - SDK not initialized or Cart API not available');
+                // Removed console.warn('[SDK] Cannot add to cart - SDK not initialized or Cart API not available');
                 return false;
             }
 
@@ -203,7 +203,7 @@
                 }
                 return true;
             } catch (error) {
-                console.error('[SDK] Error adding product to cart:', error);
+                // Removed console.error('[SDK] Error adding product to cart:', error);
                 return false;
             }
         }
@@ -216,14 +216,14 @@
         openPage(pageType, params = {}) {
             
             if (!this.isInitialized || !window.Ecwid || !window.Ecwid.openPage) {
-                console.warn('[SDK] Cannot open page - SDK not initialized or openPage API not available');
+                // Removed console.warn('[SDK] Cannot open page - SDK not initialized or openPage API not available');
                         return;
                     }
                     
             try {
                 window.Ecwid.openPage(pageType, params);
             } catch (error) {
-                console.error('[SDK] Error opening page:', error);
+                // Removed console.error('[SDK] Error opening page:', error);
             }
         }
 
@@ -302,7 +302,7 @@
 
                     // If it's a server error (5xx), retry
                     if (response.status >= 500 && attempt < maxRetries) {
-                        console.warn(`[API] Attempt ${attempt} failed with status ${response.status}, retrying...`);
+                        // Removed console.warn(`[API] Attempt ${attempt} failed with status ${response.status}, retrying...`);
                         await this.delay(1000 * attempt); // Exponential backoff
                         continue;
                     }
@@ -311,7 +311,7 @@
                     throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             } catch (error) {
                     lastError = error;
-                    console.warn(`[API] Attempt ${attempt} failed:`, error.message);
+                    // Removed console.warn(`[API] Attempt ${attempt} failed:`, error.message);
                     
                     if (attempt < maxRetries) {
                         await this.delay(1000 * attempt);
@@ -319,7 +319,7 @@
                 }
             }
 
-            console.error('[API] All attempts failed, throwing error:', lastError);
+            // Removed console.error('[API] All attempts failed, throwing error:', lastError);
             throw lastError;
         }
 
@@ -339,7 +339,7 @@
         async getRecommendationSettings() {
             
             if (!this.storeId) {
-                console.error('[API] Store ID not set');
+                // Removed // Removed console.error
                 throw new Error('Store ID not set');
             }
 
@@ -350,7 +350,7 @@
 
             
             if (!data.success) {
-                console.error('[API] Failed to get recommendation settings');
+                // Removed console.error('[API] Failed to get recommendation settings');
                 throw new Error('Failed to get recommendation settings');
             }
             
@@ -366,7 +366,7 @@
         async getProductRecommendations(productId, type) {
             
             if (!this.storeId) {
-                console.error('[API] Store ID not set');
+                // Removed // Removed console.error
                 throw new Error('Store ID not set');
             }
 
@@ -377,7 +377,7 @@
             
             
             if (!data.success) {
-                console.error(`[API] Failed to get ${type} recommendations`);
+                // Removed console.error(`[API] Failed to get ${type} recommendations`);
                 throw new Error(`Failed to get ${type} recommendations`);
             }
             
@@ -392,7 +392,7 @@
         async getCategoryRecommendations(categoryId) {
             
             if (!this.storeId) {
-                console.error('[API] Store ID not set');
+                // Removed // Removed console.error
                 throw new Error('Store ID not set');
             }
 
@@ -403,7 +403,7 @@
 
             
             if (!data.success) {
-                console.error('[API] Failed to get category recommendations');
+                // Removed console.error('[API] Failed to get category recommendations');
                 throw new Error('Failed to get category recommendations');
             }
             
@@ -417,7 +417,7 @@
         async getAllProducts() {
             
             if (!this.storeId) {
-                console.error('[API] Store ID not set');
+                // Removed // Removed console.error
                 throw new Error('Store ID not set');
             }
 
@@ -428,7 +428,7 @@
             
             
             if (!data.success) {
-                console.error('[API] Failed to get all products');
+                // Removed console.error('[API] Failed to get all products');
                 throw new Error('Failed to get all products');
             }
             
@@ -443,7 +443,7 @@
         async getProduct(productId) {
             
             if (!this.storeId) {
-                console.error('[API] Store ID not set');
+                // Removed // Removed console.error
                 throw new Error('Store ID not set');
             }
 
@@ -454,7 +454,7 @@
             
             
             if (!data.success) {
-                console.error('[API] Failed to get product data');
+                // Removed console.error('[API] Failed to get product data');
                 throw new Error('Failed to get product data');
             }
             
@@ -476,14 +476,14 @@
                             return { ...p, options: productData.options };
                         }
                     } catch (error) {
-                        console.warn(`[API] Error getting product options for ${p.ecwid_product_id}:`, error);
+                        // Removed console.warn(`[API] Error getting product options for ${p.ecwid_product_id}:`, error);
                     }
                     return p;
                 }));
                 
                 return results;
             } catch (error) {
-                console.error('[API] Error enriching recommendations:', error);
+                // Removed console.error('[API] Error enriching recommendations:', error);
                 return recommendations;
             }
         }
@@ -537,7 +537,7 @@
 
                 this.initialized = true;
             } catch (error) {
-                console.error('[RECOM] Error initializing layers:', error);
+                // Removed console.error('[RECOM] Error initializing layers:', error);
             }
         }
 
@@ -568,7 +568,7 @@
                     } else {
                 }
             } catch (error) {
-                console.error('[RECOM] Error checking page settings:', error);
+                // Removed console.error('[RECOM] Error checking page settings:', error);
             }
         }
 
@@ -637,7 +637,7 @@
                     this.renderRecommendations(enriched);
                 }
             } catch (error) {
-                console.error('[RECOM] Error getting upsell recommendations:', error);
+                // Removed console.error('[RECOM] Error getting upsell recommendations:', error);
             }
         }
 
@@ -672,7 +672,7 @@
                     }
                 }
             } catch (error) {
-                console.error('[RECOM] Error getting cart recommendations:', error);
+                // Removed console.error('[RECOM] Error getting cart recommendations:', error);
             }
         }
 
@@ -695,7 +695,7 @@
                     this.renderCrossSellRecommendations(enriched);
                 }
             } catch (error) {
-                console.error('[RECOM] Error getting cross-sell recommendations:', error);
+                // Removed console.error('[RECOM] Error getting cross-sell recommendations:', error);
             }
         }
 
@@ -728,7 +728,7 @@
                             categoryId = productData.defaultCategoryId;
                         }
                     } catch (error) {
-                        console.error('[RECOM] Error getting product data:', error);
+                        // Removed console.error('[RECOM] Error getting product data:', error);
                     }
                 }
             } else {
@@ -744,7 +744,7 @@
                         this.recommendationBlockShown = true;
                     }
                 } catch (error) {
-                    console.error('[RECOM] Error in fallback:', error);
+                    // Removed console.error('[RECOM] Error in fallback:', error);
                 }
                 return;
             }
@@ -757,7 +757,7 @@
                     this.recommendationBlockShown = true;
                 }
             } catch (error) {
-                console.error('[RECOM] Error getting category recommendations:', error);
+                // Removed console.error('[RECOM] Error getting category recommendations:', error);
             }
         }
 
@@ -995,7 +995,7 @@
             try {
                 item.setAttribute('data-product-data', JSON.stringify(product));
             } catch (error) {
-                console.error('[RECOM] Error storing product data on item', error);
+                // Removed console.error('[RECOM] Error storing product data on item', error);
             }
 
             // Attach SDK navigation to product page

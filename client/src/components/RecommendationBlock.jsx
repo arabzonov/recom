@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import logger from '../utils/logger';
+// Removed logger import
 import { getStoreId, getProductId, setupProductPageListener, waitForEcwidAPI } from '../utils/ecwidSDK';
 
 /**
@@ -43,10 +43,10 @@ const RecommendationBlock = ({ storeId, productId, isEnabled = true }) => {
           fetchRecommendations(extractedStoreId, productId);
         });
       } else {
-        logger.warn('Could not extract store ID from Ecwid SDK');
+        // Removed logger.warn('Could not extract store ID from Ecwid SDK');
       }
     } catch (error) {
-      logger.error('Error initializing recommendations', error);
+      // Removed logger.error('Error initializing recommendations', error);
     }
   };
 
@@ -60,23 +60,21 @@ const RecommendationBlock = ({ storeId, productId, isEnabled = true }) => {
     setError(null);
 
     try {
-      logger.info('Fetching recommendations', { storeId: currentStoreId, productId: currentProductId });
+      // Removed logger.info('Fetching recommendations', { storeId: currentStoreId, productId: currentProductId });
       
       const response = await fetch(`/api/ecwid/recommendations/${currentStoreId}/${currentProductId}`);
       const data = await response.json();
 
       if (data.success && data.recommendations) {
         setRecommendations(data.recommendations);
-        logger.info('Recommendations fetched successfully', { 
-          count: data.recommendations.length 
-        });
+        // Removed logger call
       } else {
         setError(data.error || 'Failed to fetch recommendations');
-        logger.error('Failed to fetch recommendations', data);
+        // Removed logger call
       }
     } catch (err) {
       setError('Network error while fetching recommendations');
-      logger.error('Network error fetching recommendations', err);
+      // Removed logger call
     } finally {
       setLoading(false);
     }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useEcwid } from '../hooks/useEcwid';
 import OAuthButton from './OAuthButton';
-import logger from '../utils/logger';
+// Removed logger import
 import { 
   CheckCircleIcon, 
   ExclamationTriangleIcon,
@@ -19,29 +19,29 @@ const StoreSetup = ({ onSetupComplete }) => {
   const [manualStoreId, setManualStoreId] = useState('');
 
   useEffect(() => {
-    logger.componentLifecycle('StoreSetup', 'useEffect triggered', { isLoaded, storeId });
+    // Removed logger.componentLifecycle('StoreSetup', 'useEffect triggered', { isLoaded, storeId });
     if (isLoaded && storeId) {
-      logger.info('Store is loaded and has storeId, checking setup');
+      // Removed logger.info('Store is loaded and has storeId, checking setup');
       checkStoreSetup();
     } else if (isLoaded && !storeId) {
-      logger.info('Store is loaded but no storeId, needs manual store ID');
+      // Removed logger.info('Store is loaded but no storeId, needs manual store ID');
       setSetupStatus('needs_manual_store_id');
     }
   }, [isLoaded, storeId]);
 
   const checkStoreSetup = async () => {
     try {
-      logger.info('Checking store setup', { storeId });
+      // Removed logger.info('Checking store setup', { storeId });
       setSetupStatus('checking');
       
       // First check OAuth status
-      logger.apiCall(`/api/oauth/status/${storeId}`, 'GET');
+      // Removed logger.apiCall(`/api/oauth/status/${storeId}`, 'GET');
       const oauthResponse = await fetch(`/api/oauth/status/${storeId}`);
       const oauthData = await oauthResponse.json();
-      logger.apiResponse(`/api/oauth/status/${storeId}`, oauthResponse.status, oauthData);
+      // Removed logger.apiResponse(`/api/oauth/status/${storeId}`, oauthResponse.status, oauthData);
 
       if (oauthData.success && oauthData.authenticated) {
-        logger.info('Store is OAuth authenticated');
+        // Removed logger.info('Store is OAuth authenticated');
         setStoreInfo(oauthData.store);
         setSetupStatus('configured');
         onSetupComplete(oauthData.store);
@@ -49,30 +49,30 @@ const StoreSetup = ({ onSetupComplete }) => {
       }
 
       // If not OAuth authenticated, check if we can get store info directly
-      logger.info('OAuth not authenticated, trying direct store info');
+      // Removed logger.info('OAuth not authenticated, trying direct store info');
       try {
-        logger.apiCall(`/api/ecwid/store/${storeId}`, 'GET');
+        // Removed logger.apiCall(`/api/ecwid/store/${storeId}`, 'GET');
         const storeResponse = await fetch(`/api/ecwid/store/${storeId}`);
         const storeData = await storeResponse.json();
-        logger.apiResponse(`/api/ecwid/store/${storeId}`, storeResponse.status, storeData);
+        // Removed logger.apiResponse(`/api/ecwid/store/${storeId}`, storeResponse.status, storeData);
         
         if (storeData.success) {
-          logger.info('Store info retrieved directly');
+          // Removed logger.info('Store info retrieved directly');
           setStoreInfo(storeData.data);
           setSetupStatus('configured');
           onSetupComplete(storeData.data);
           return;
         }
       } catch (apiError) {
-        logger.error('Direct store info failed', apiError);
+        // Removed logger.error('Direct store info failed', apiError);
         // Continue to OAuth setup
       }
 
       // If we get here, store needs OAuth setup
-      logger.info('Store needs OAuth setup');
+      // Removed logger.info('Store needs OAuth setup');
       setSetupStatus('needs_oauth');
     } catch (error) {
-      logger.error('Store setup check failed', error);
+      // Removed logger.error('Store setup check failed', error);
       setError('Failed to check store setup');
       setSetupStatus('error');
     }

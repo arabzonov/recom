@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useEcwid } from '../hooks/useEcwid';
-import logger from '../utils/logger';
+// Removed logger import
 import { 
   CogIcon, 
   EyeIcon, 
@@ -52,7 +52,7 @@ const RecommendationSettings = () => {
     if (!storeId) return;
 
     try {
-      logger.info('Checking sync status for store', { storeId });
+      // Removed logger.info('Checking sync status for store', { storeId });
       
       const response = await fetch(`/api/sync/status/${storeId}`);
       const data = await response.json();
@@ -62,14 +62,14 @@ const RecommendationSettings = () => {
         
         // If store is not synced, trigger sync automatically
         if (!data.syncStatus.isSynced) {
-          logger.info('Store not synced, triggering sync automatically', { storeId, syncStatus: data.syncStatus });
+          // Removed logger.info('Store not synced, triggering sync automatically', { storeId, syncStatus: data.syncStatus });
           await triggerSync();
         }
       } else {
-        logger.error('Failed to check sync status', data);
+        // Removed logger.error('Failed to check sync status', data);
       }
     } catch (error) {
-      logger.error('Error checking sync status', error);
+      // Removed logger.error('Error checking sync status', error);
     }
   };
 
@@ -77,7 +77,7 @@ const RecommendationSettings = () => {
     if (!storeId) return;
 
     try {
-      logger.info('Triggering background sync for store', { storeId });
+      // Removed logger.info('Triggering background sync for store', { storeId });
       
       const response = await fetch('/api/sync/trigger', {
         method: 'POST',
@@ -89,17 +89,17 @@ const RecommendationSettings = () => {
       const data = await response.json();
 
       if (data.success) {
-        logger.info('Background sync started successfully', { storeId });
+        // Removed logger.info('Background sync started successfully', { storeId });
         
         // Recheck sync status after successful sync (with delay)
         setTimeout(() => {
           checkSyncStatus();
         }, 5000);
       } else {
-        logger.error('Background sync failed', data);
+        // Removed logger.error('Background sync failed', data);
       }
     } catch (error) {
-      logger.error('Error triggering background sync', error);
+      // Removed logger.error('Error triggering background sync', error);
     }
   };
 
@@ -109,24 +109,24 @@ const RecommendationSettings = () => {
     setLoading(true);
     setNeedsAuth(false);
     try {
-      logger.info('Fetching recommendation settings', { storeId });
+      // Removed logger.info('Fetching recommendation settings', { storeId });
       
       const response = await fetch(`/api/ecwid/recommendation-settings/${storeId}`);
       const data = await response.json();
 
       if (data.success) {
         setSettings(data.settings);
-        logger.info('Settings fetched successfully', data.settings);
+        // Removed logger.info('Settings fetched successfully', data.settings);
       } else {
         if (response.status === 401 && data.error?.includes('OAuth setup')) {
           setNeedsAuth(true);
-          logger.info('Store needs OAuth authentication');
+          // Removed logger.info('Store needs OAuth authentication');
         } else {
-          logger.error('Failed to fetch settings', data);
+          // Removed logger.error('Failed to fetch settings', data);
         }
       }
     } catch (error) {
-      logger.error('Error fetching settings', error);
+      // Removed logger.error('Error fetching settings', error);
     } finally {
       setLoading(false);
     }
@@ -139,7 +139,7 @@ const RecommendationSettings = () => {
     setMessage(null);
 
     try {
-      logger.info('Saving recommendation settings', { storeId, settings });
+      // Removed logger.info('Saving recommendation settings', { storeId, settings });
       
       const response = await fetch(`/api/ecwid/recommendation-settings/${storeId}`, {
         method: 'POST',
@@ -156,20 +156,20 @@ const RecommendationSettings = () => {
           type: 'success',
           text: 'Settings saved successfully!'
         });
-        logger.info('Settings saved successfully');
+        // Removed logger.info('Settings saved successfully');
       } else {
         setMessage({
           type: 'error',
           text: data.error || 'Failed to save settings'
         });
-        logger.error('Failed to save settings', data);
+        // Removed logger.error('Failed to save settings', data);
       }
     } catch (error) {
       setMessage({
         type: 'error',
         text: 'Network error while saving settings'
       });
-      logger.error('Error saving settings', error);
+      // Removed logger.error('Error saving settings', error);
     } finally {
       setSaving(false);
     }
@@ -222,7 +222,7 @@ const RecommendationSettings = () => {
     if (!storeId) return;
 
     try {
-      logger.info('Starting OAuth authorization', { storeId });
+      // Removed logger.info('Starting OAuth authorization', { storeId });
       
       const response = await fetch(`/api/oauth/auth/${storeId}`);
 
@@ -236,14 +236,14 @@ const RecommendationSettings = () => {
           type: 'error',
           text: data.error || 'Failed to start authorization'
         });
-        logger.error('OAuth authorization failed', data);
+        // Removed logger.error('OAuth authorization failed', data);
       }
     } catch (error) {
       setMessage({
         type: 'error',
         text: 'Network error during authorization'
       });
-      logger.error('Error starting OAuth authorization', error);
+      // Removed logger.error('Error starting OAuth authorization', error);
     }
   };
 

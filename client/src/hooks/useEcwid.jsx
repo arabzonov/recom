@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { detectStoreId, detectStoreIdWithRetry } from '../utils/storeDetection';
 import { getStoreId, waitForEcwidAPI } from '../utils/ecwidSDK';
-import logger from '../utils/logger';
+// Removed logger import
 
 const EcwidContext = createContext();
 
@@ -21,7 +21,7 @@ export const EcwidProvider = ({ children }) => {
   useEffect(() => {
     const initializeStore = async () => {
       try {
-        logger.info('Initializing Ecwid store');
+        // Removed logger.info('Initializing Ecwid store');
         
         // Set loaded immediately to show the app
         setIsLoaded(true);
@@ -30,46 +30,46 @@ export const EcwidProvider = ({ children }) => {
         const storedStoreId = localStorage.getItem('ecwid_store_id');
         
         if (storedStoreId) {
-          logger.info('Using stored store ID', { storeId: storedStoreId });
+          // Removed logger.info('Using stored store ID', { storeId: storedStoreId });
           setStoreId(storedStoreId);
           return;
         }
 
-        logger.info('No stored store ID, detecting...');
+        // Removed logger.info('No stored store ID, detecting...');
         
         // First try proper SDK method
         try {
           await waitForEcwidAPI();
           const sdkStoreId = await getStoreId();
           if (sdkStoreId) {
-            logger.info('Store ID found using SDK', { storeId: sdkStoreId });
+            // Removed logger.info('Store ID found using SDK', { storeId: sdkStoreId });
             setStoreId(sdkStoreId);
             localStorage.setItem('ecwid_store_id', sdkStoreId);
             return;
           }
         } catch (error) {
-          logger.warn('SDK method failed, trying fallback methods', error);
+          // Removed logger.warn('SDK method failed, trying fallback methods', error);
         }
         
         // Fallback to legacy detection methods
         let detectedStoreId = await detectStoreId();
         
         if (!detectedStoreId) {
-          logger.info('Store ID not found, trying retry mechanism');
+          // Removed logger.info('Store ID not found, trying retry mechanism');
           // If not found immediately, try with retry mechanism
           detectedStoreId = await detectStoreIdWithRetry();
         }
 
         if (detectedStoreId) {
-          logger.info('Store ID detected successfully', { storeId: detectedStoreId });
+          // Removed logger.info('Store ID detected successfully', { storeId: detectedStoreId });
           setStoreId(detectedStoreId);
           
         } else {
-          logger.error('No store ID found using any detection method');
+          // Removed logger.error('No store ID found using any detection method');
           setError('Store ID not found');
         }
       } catch (err) {
-        logger.error('Store initialization error', err);
+        // Removed logger.error('Store initialization error', err);
         setError(err.message);
         // Still set loaded to true even if there's an error
         setIsLoaded(true);
@@ -85,7 +85,7 @@ export const EcwidProvider = ({ children }) => {
   };
 
   const setStoreIdManually = (newStoreId) => {
-    logger.info('Manually setting store ID', { storeId: newStoreId });
+    // Removed logger.info('Manually setting store ID', { storeId: newStoreId });
     setStoreId(newStoreId);
     localStorage.setItem('ecwid_store_id', newStoreId);
   };
