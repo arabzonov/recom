@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useLocation } from 'react-router-dom';
 import { EcwidProvider, useEcwid } from './hooks/useEcwid';
 import StoreSetup from './components/StoreSetup';
 import Settings from './pages/Settings';
+import StoreStatsPage from './pages/StoreStatsPage';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import RecommendationSettings from './components/RecommendationSettings';
@@ -13,7 +14,6 @@ const AppContent = () => {
   const { isLoaded, storeId, error } = useEcwid();
   const [storeConfigured, setStoreConfigured] = useState(false);
   const [storeInfo, setStoreInfo] = useState(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     // Check if store is already configured in localStorage
@@ -52,7 +52,7 @@ const AppContent = () => {
     return <StoreSetup onSetupComplete={handleStoreSetupComplete} />;
   }
 
-  // Show main app if configured
+  // Show main app with routing if configured
   // Removed logger call
   
   try {
@@ -62,19 +62,24 @@ const AppContent = () => {
     
     return (
       <div className="min-h-screen bg-gray-50">
-        <main className="p-6">
-          <div className="space-y-6">
-            <RecommendationSettings />
-            <StoreStats />
-          </div>
-          
-          {/* Support Notice */}
-          <div className="mt-8 flex justify-center">
-            <div className="text-center text-sm text-gray-600">
-              Need help? Mail to: <a href="mailto:support@1n.ax" className="text-blue-600 hover:text-blue-800 underline">support@1n.ax</a>
-            </div>
-          </div>
-        </main>
+        <Navigation />
+        <Routes>
+          <Route path="/" element={
+            <main className="p-6">
+              <div className="space-y-6">
+                <RecommendationSettings />
+              </div>
+              
+              {/* Support Notice */}
+              <div className="mt-8 flex justify-center">
+                <div className="text-center text-sm text-gray-600">
+                  Need help? Mail to: <a href="mailto:support@1n.ax" className="text-blue-600 hover:text-blue-800 underline">support@1n.ax</a>
+                </div>
+              </div>
+            </main>
+          } />
+          <Route path="/stats" element={<StoreStatsPage />} />
+        </Routes>
       </div>
     );
   } catch (error) {
