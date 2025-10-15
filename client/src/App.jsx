@@ -3,7 +3,6 @@ import { BrowserRouter as Router } from 'react-router-dom';
 import { EcwidProvider, useEcwid } from './hooks/useEcwid';
 import StoreSetup from './components/StoreSetup';
 import RecommendationSettings from './components/RecommendationSettings';
-import StoreStats from './components/StoreStats';
 // Removed logger import
 
 const AppContent = () => {
@@ -61,7 +60,6 @@ const AppContent = () => {
         <main className="p-6">
           <div className="space-y-6">
             <RecommendationSettings />
-            <StoreStats />
           </div>
           
           {/* Support Notice */}
