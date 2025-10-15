@@ -3,7 +3,7 @@ services:
     name: 1recom-app
     env: node
     plan: starter
-    buildCommand: npm install
+    buildCommand: npm ci --only=production --no-audit --no-fund && npm install --production=false --no-audit --no-fund && npm run build
     startCommand: npm run start:production
     envVars:
       - key: NODE_ENV
