@@ -61,29 +61,11 @@ const AppContent = () => {
     
     return (
       <div className="min-h-screen bg-gray-50">
-        <div className="bg-white shadow-sm border-b border-gray-200 p-4">
-          <h1 className="text-xl font-semibold text-gray-900">Ecwid Plugin Dashboard</h1>
-        </div>
-        <div className="flex">
-          <div className="w-64 bg-white shadow-lg p-4">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Navigation</h2>
-            <div className="space-y-2">
-              <div className="p-2 bg-primary-100 text-primary-700 rounded">Dashboard</div>
-              <div className="p-2 text-gray-600 hover:bg-gray-50 rounded">Settings</div>
-            </div>
+        <main className="p-6">
+          <div className="space-y-6">
+            <RecommendationSettings />
           </div>
-          <main className="flex-1 p-6">
-            <div className="space-y-6">
-              <div className="bg-white rounded-lg shadow p-6">
-                <h1 className="text-2xl font-bold text-gray-900 mb-4">Dashboard</h1>
-                <p className="text-gray-600">Welcome to your Ecwid Plugin Dashboard!</p>
-                <p className="text-sm text-gray-500 mt-2">Store ID: {storeId}</p>
-              </div>
-              
-              <RecommendationSettings />
-            </div>
-          </main>
-        </div>
+        </main>
       </div>
     );
   } catch (error) {

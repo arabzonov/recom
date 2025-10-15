@@ -39,12 +39,69 @@ const RecommendationSettings = () => {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
   const [needsAuth, setNeedsAuth] = useState(false);
+  const [syncStatus, setSyncStatus] = useState(null);
 
   useEffect(() => {
     if (storeId) {
+      checkSyncStatus();
       fetchSettings();
     }
   }, [storeId]);
+
+  const checkSyncStatus = async () => {
+    if (!storeId) return;
+
+    try {
+      logger.info('Checking sync status for store', { storeId });
+      
+      const response = await fetch(`/api/sync/status/${storeId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setSyncStatus(data.syncStatus);
+        
+        // If store is not synced, trigger sync automatically
+        if (!data.syncStatus.isSynced) {
+          logger.info('Store not synced, triggering sync automatically', { storeId, syncStatus: data.syncStatus });
+          await triggerSync();
+        }
+      } else {
+        logger.error('Failed to check sync status', data);
+      }
+    } catch (error) {
+      logger.error('Error checking sync status', error);
+    }
+  };
+
+  const triggerSync = async () => {
+    if (!storeId) return;
+
+    try {
+      logger.info('Triggering background sync for store', { storeId });
+      
+      const response = await fetch('/api/sync/trigger', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        logger.info('Background sync started successfully', { storeId });
+        
+        // Recheck sync status after successful sync (with delay)
+        setTimeout(() => {
+          checkSyncStatus();
+        }, 5000);
+      } else {
+        logger.error('Background sync failed', data);
+      }
+    } catch (error) {
+      logger.error('Error triggering background sync', error);
+    }
+  };
 
   const fetchSettings = async () => {
     if (!storeId) return;
@@ -204,7 +261,7 @@ const RecommendationSettings = () => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center mb-6">
           <CogIcon className="h-6 w-6 text-blue-600 mr-3" />
-          <h2 className="text-xl font-semibold text-gray-900">Recommendation Settings</h2>
+          <h2 className="text-xl font-semibold text-gray-900">1Recom Settings</h2>
         </div>
 
         <div className="text-center py-8">
@@ -230,7 +287,7 @@ const RecommendationSettings = () => {
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div className="flex items-center mb-6">
         <CogIcon className="h-6 w-6 text-blue-600 mr-3" />
-        <h2 className="text-xl font-semibold text-gray-900">Recommendation Settings</h2>
+        <h2 className="text-xl font-semibold text-gray-900">1Recom Settings</h2>
       </div>
 
       {message && (

@@ -143,6 +143,29 @@ class StoreService extends BaseDataAccess {
     `, [settingsJson, storeId]);
   }
 
+  /**
+   * Check if store has synced data (products and orders)
+   * @param {string} storeId - Store ID
+   * @returns {Promise<Object>} Sync status object
+   */
+  async checkSyncStatus(storeId) {
+    const productCount = await this.get(`
+      SELECT COUNT(*) as count FROM products WHERE store_id = ?
+    `, [storeId]);
+
+    const orderCount = await this.get(`
+      SELECT COUNT(*) as count FROM orders WHERE store_id = ?
+    `, [storeId]);
+
+    return {
+      hasProducts: productCount.count > 0,
+      hasOrders: orderCount.count > 0,
+      productCount: productCount.count,
+      orderCount: orderCount.count,
+      isSynced: productCount.count > 0 && orderCount.count > 0
+    };
+  }
+
 }
 
 export default StoreService;
