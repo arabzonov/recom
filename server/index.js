@@ -92,11 +92,7 @@ if (!NODE_ENV) {
   process.exit(1);
 }
 
-const PORT = process.env.PORT;
-if (!PORT) {
-  console.error('ERROR: PORT environment variable is required');
-  process.exit(1);
-}
+const PORT = process.env.PORT || 3001;
 
 // Security middleware
 app.use(helmet({
@@ -465,10 +461,18 @@ app.use((req, res) => {
 // Start server
 const startServer = async () => {
   try {
-    app.listen(PORT, () => {
-      // Server started
+    // Initialize database
+    await initializeDatabase();
+    console.log('✅ Database initialized successfully');
+
+    // Start server
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 1Recom Application Server running on port ${PORT}`);
+      console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+      console.log(`📊 API Base URL: ${process.env.NODE_ENV === 'production' ? 'https://your-app-name.onrender.com' : `http://localhost:${PORT}`}`);
     });
   } catch (error) {
+    console.error('❌ Failed to start server:', error);
     process.exit(1);
   }
 };
