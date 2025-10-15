@@ -462,6 +462,15 @@ app.use((req, res) => {
 // Start server
 const startServer = async () => {
   try {
+    console.log('🔧 Starting server initialization...');
+    console.log('🔧 Checking database imports...');
+    console.log('🔧 initializeDatabase function:', typeof initializeDatabase);
+    console.log('🔧 closeDatabase function:', typeof closeDatabase);
+    
+    if (typeof initializeDatabase !== 'function') {
+      throw new Error('initializeDatabase is not a function');
+    }
+    
     // Initialize database
     await initializeDatabase();
     console.log('✅ Database initialized successfully');
