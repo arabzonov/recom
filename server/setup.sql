@@ -11,6 +11,7 @@ DROP TABLE IF EXISTS orders;
 DROP TABLE IF EXISTS products;
 DROP TABLE IF EXISTS stores;
 
+
 -- Create stores table
 CREATE TABLE stores (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
