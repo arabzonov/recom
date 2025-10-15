@@ -51,6 +51,7 @@ import oauthRoutes from './routes/oauth.js';
 import recommendationRoutes from './routes/recommendations.js';
 import recommendationSettingsRoutes from './routes/recommendation-settings.js';
 import syncRoutes from './routes/sync.js';
+import storeStatsRoutes from './routes/store-stats.js';
 
 // Configure dotenv
 dotenv.config();
@@ -171,6 +172,7 @@ app.use('/api/oauth', oauthRoutes);
 app.use('/api/ecwid/recommendations', recommendationRoutes);
 app.use('/api/ecwid/recommendation-settings', recommendationSettingsRoutes);
 app.use('/api/sync', syncRoutes);
+app.use('/api/store-stats', storeStatsRoutes);
 
 // Proxy endpoint to fetch product details (including options)
 app.get('/api/proxy/product/:storeId/:productId', async (req, res) => {

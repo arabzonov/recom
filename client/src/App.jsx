@@ -6,6 +6,7 @@ import Settings from './pages/Settings';
 import Header from './components/Header';
 import Sidebar from './components/Sidebar';
 import RecommendationSettings from './components/RecommendationSettings';
+import StoreStats from './components/StoreStats';
 // Removed logger import
 
 const AppContent = () => {
@@ -64,6 +65,7 @@ const AppContent = () => {
         <main className="p-6">
           <div className="space-y-6">
             <RecommendationSettings />
+            <StoreStats />
           </div>
           
           {/* Support Notice */}
