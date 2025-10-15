@@ -65,6 +65,13 @@ const AppContent = () => {
           <div className="space-y-6">
             <RecommendationSettings />
           </div>
+          
+          {/* Support Notice */}
+          <div className="mt-8 flex justify-center">
+            <div className="text-center text-sm text-gray-600">
+              Need help? Mail to: <a href="mailto:support@1n.ax" className="text-blue-600 hover:text-blue-800 underline">support@1n.ax</a>
+            </div>
+          </div>
         </main>
       </div>
     );
