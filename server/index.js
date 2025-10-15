@@ -105,6 +105,7 @@ app.use(helmet({
       imgSrc: ["'self'", "data:", "https://*.ecwid.com", "https://images-cdn.ecwid.com"],
       connectSrc: ["'self'", "https://*.ecwid.com", "https://ec.1nax.app"],
       frameSrc: ["'self'", "https://app.ecwid.com", "https://*.ecwid.com"],
+      frameAncestors: ["'self'", "https://app.ecwid.com", "https://*.ecwid.com", "https://*.1nax.app"],
       fontSrc: ["'self'", "https://*.ecwid.com"],
     },
   },
