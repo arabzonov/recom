@@ -479,7 +479,7 @@ const startServer = async () => {
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 1Recom Application Server running on port ${PORT}`);
       console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`📊 API Base URL: ${process.env.NODE_ENV === 'production' ? 'https://your-app-name.onrender.com' : `http://localhost:${PORT}`}`);
+      console.log(`📊 API Base URL: ${process.env.NODE_ENV === 'production' ? process.env.API_BASE_URL || 'https://recom-mqxd.onrender.com' : `http://localhost:${PORT}`}`);
     });
   } catch (error) {
     console.error('❌ Failed to start server:', error);
