@@ -164,6 +164,23 @@ app.use(morgan(LOG_LEVEL));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+// Serve ec.js and ec.css with CORS headers
+app.get('/ec.js', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Content-Type', 'application/javascript');
+  res.sendFile(path.join(__dirname, '../client/public/ec.js'));
+});
+
+app.get('/ec.css', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Content-Type', 'text/css');
+  res.sendFile(path.join(__dirname, '../client/public/ec.css'));
+});
+
 // Serve static files from the React app build
 app.use(express.static(path.join(__dirname, '../dist')));
 
