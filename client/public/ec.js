@@ -324,19 +324,12 @@
         }
 
         /**
-         * Delay utility with performance optimization
+         * Delay utility
          * @param {number} ms 
          * @returns {Promise}
          */
         delay(ms) {
-            return new Promise(resolve => {
-                // Use requestIdleCallback if available for better performance
-                if (window.requestIdleCallback) {
-                    requestIdleCallback(() => setTimeout(resolve, ms));
-                } else {
-                    setTimeout(resolve, ms);
-                }
-            });
+            return new Promise(resolve => setTimeout(resolve, ms));
         }
 
         /**
@@ -1015,11 +1008,6 @@
                         window.Ecwid.openPage('product', { id: parseInt(productId) });
                     }
                 }, { passive: false });
-                
-                // Add passive touchstart listener to prevent scroll blocking
-                linkEl.addEventListener('touchstart', (e) => {
-                    // Passive touchstart listener to prevent scroll blocking
-                }, { passive: true });
             }
 
             // Toggle options roll-down
@@ -1029,12 +1017,7 @@
                 optionsHeader.addEventListener('click', (e) => {
                     e.preventDefault();
                     optionsRoot.classList.toggle('collapsed');
-                }, { passive: false });
-                
-                // Add passive touchstart listener
-                optionsHeader.addEventListener('touchstart', (e) => {
-                    // Passive touchstart listener to prevent scroll blocking
-                }, { passive: true });
+                });
             }
 
             // After rendering, attach option change listeners to update price
@@ -1050,10 +1033,7 @@
                 priceEl.textContent = `$${newPrice.toFixed(2)}`;
             };
             const inputs = itemEl.querySelectorAll('.recom-option-input');
-            inputs.forEach(inp => {
-                inp.addEventListener('change', update, { passive: true });
-                inp.addEventListener('input', update, { passive: true });
-            });
+            inputs.forEach(inp => inp.addEventListener('change', update, { passive: true }));
             update();
         }
 
@@ -1205,13 +1185,10 @@
                         optionsContainer.classList.remove('collapsed');
                     }
 
-                    // Apply red border + shake animation with performance optimization
+                    // Apply red border + shake animation
                     invalidInputs.forEach(input => {
                         input.classList.add('recom-option-blink');
-                        // Use requestAnimationFrame for smoother animation removal
-                        setTimeout(() => {
-                            requestAnimationFrame(() => input.classList.remove('recom-option-blink'));
-                        }, 600);
+                        setTimeout(() => input.classList.remove('recom-option-blink'), 600);
                     });
 
                     return; // Don't add to cart
@@ -1269,15 +1246,9 @@
             button.textContent = 'Added';
             button.classList.add('recom-cart-btn-success');
             
-            // Use requestAnimationFrame for better performance
-            const resetButton = () => {
+            setTimeout(() => {
                 button.textContent = originalText;
                 button.className = originalClass;
-            };
-            
-            // Use setTimeout with a shorter delay and requestAnimationFrame for smoother performance
-            setTimeout(() => {
-                requestAnimationFrame(resetButton);
             }, 3000);
         }
 

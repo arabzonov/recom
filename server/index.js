@@ -78,13 +78,6 @@ app.use((req, res, next) => {
   res.setHeader('Access-Control-Max-Age', '86400'); // 24 hours
   res.removeHeader('Access-Control-Allow-Credentials');
   
-  // Add CORS headers for static files
-  if (req.path.includes('/ec.js') || req.path.includes('/ec.css')) {
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  }
-  
   // Handle preflight OPTIONS requests immediately
   if (req.method === 'OPTIONS') {
     res.status(200).end();
@@ -109,8 +102,8 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://connect.facebook.net", "https://www.googletagmanager.com", "https://app.ecwid.com", "https://*.ecwid.com", "https://*.cloudfront.net", "https://djqizrxa6f10j.cloudfront.net", "https://ec.1nax.app"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://*.ecwid.com", "https://fonts.googleapis.com", "https://ec.1nax.app"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://connect.facebook.net", "https://www.googletagmanager.com", "https://app.ecwid.com", "https://*.ecwid.com", "https://*.cloudfront.net", "https://djqizrxa6f10j.cloudfront.net"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://*.ecwid.com", "https://fonts.googleapis.com"],
       imgSrc: ["'self'", "data:", "https://*.ecwid.com", "https://images-cdn.ecwid.com"],
       connectSrc: ["'self'", "https://*.ecwid.com", "https://ec.1nax.app", "https://*.cloudfront.net"],
       frameSrc: ["'self'", "https://app.ecwid.com", "https://*.ecwid.com"],
@@ -173,29 +166,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve static files from the React app build
 app.use(express.static(path.join(__dirname, '../dist')));
-
-// Serve ec.js and ec.css files with proper CORS headers
-app.get('/ec.js', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Content-Type', 'application/javascript');
-  res.sendFile(path.join(__dirname, '../client/public/ec.js'));
-});
-
-app.get('/ec.css', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Content-Type', 'text/css');
-  res.sendFile(path.join(__dirname, '../client/public/ec.css'));
-});
-
-// Serve favicon
-app.get('/favicon.ico', (req, res) => {
-  res.setHeader('Content-Type', 'image/x-icon');
-  res.sendFile(path.join(__dirname, '../client/public/favicon.ico'));
-});
 
 // API Routes
 app.use('/api/ecwid', ecwidRoutes);
