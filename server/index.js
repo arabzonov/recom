@@ -104,6 +104,43 @@ if (!NODE_ENV) {
 
 const PORT = process.env.PORT || 3001;
 
+// Serve ec.js and ec.css files with proper CORS headers BEFORE security middleware
+app.get('/ec.js', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Content-Type', 'application/javascript');
+  res.sendFile(path.join(__dirname, '../client/public/ec.js'));
+});
+
+app.options('/ec.js', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.status(200).end();
+});
+
+app.get('/ec.css', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Content-Type', 'text/css');
+  res.sendFile(path.join(__dirname, '../client/public/ec.css'));
+});
+
+app.options('/ec.css', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.status(200).end();
+});
+
+// Serve favicon
+app.get('/favicon.ico', (req, res) => {
+  res.setHeader('Content-Type', 'image/x-icon');
+  res.sendFile(path.join(__dirname, '../client/public/favicon.ico'));
+});
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {
@@ -173,29 +210,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve static files from the React app build
 app.use(express.static(path.join(__dirname, '../dist')));
-
-// Serve ec.js and ec.css files with proper CORS headers
-app.get('/ec.js', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Content-Type', 'application/javascript');
-  res.sendFile(path.join(__dirname, '../client/public/ec.js'));
-});
-
-app.get('/ec.css', (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Content-Type', 'text/css');
-  res.sendFile(path.join(__dirname, '../client/public/ec.css'));
-});
-
-// Serve favicon
-app.get('/favicon.ico', (req, res) => {
-  res.setHeader('Content-Type', 'image/x-icon');
-  res.sendFile(path.join(__dirname, '../client/public/favicon.ico'));
-});
 
 // API Routes
 app.use('/api/ecwid', ecwidRoutes);
