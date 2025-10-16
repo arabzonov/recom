@@ -197,16 +197,23 @@ app.use('/stats', publicStatsRoutes);
 app.get('/api/proxy/product/:storeId/:productId', async (req, res) => {
   try {
     const { storeId, productId } = req.params;
+    logger.info(`[PROXY] Product request for store ${storeId}, product ${productId}`);
+    
     const { StoreService } = await import('./data/index.js');
     const storeService = new StoreService();
     const store = await storeService.findByStoreId(storeId);
     if (!store || !store.access_token) {
+      logger.error(`[PROXY] Store ${storeId} not found or not authenticated`);
       return res.status(404).json({ success: false, error: 'Store not found or not authenticated' });
     }
+    
+    logger.info(`[PROXY] Store ${storeId} found, fetching product ${productId}`);
     const EcwidApiService = (await import('./services/EcwidApiService.js')).default;
     const product = await EcwidApiService.getProduct(storeId, store.access_token, productId);
+    logger.info(`[PROXY] Product ${productId} fetched successfully`);
     res.json({ success: true, product });
   } catch (err) {
+    logger.error(`[PROXY] Error fetching product ${req.params.productId}:`, err.message);
     res.status(500).json({ success: false, error: 'Failed to fetch product details' });
   }
 });
