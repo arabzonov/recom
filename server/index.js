@@ -102,8 +102,8 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://connect.facebook.net", "https://www.googletagmanager.com", "https://app.ecwid.com", "https://*.ecwid.com", "https://*.cloudfront.net", "https://djqizrxa6f10j.cloudfront.net"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://*.ecwid.com", "https://fonts.googleapis.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://connect.facebook.net", "https://www.googletagmanager.com", "https://app.ecwid.com", "https://*.ecwid.com", "https://*.cloudfront.net", "https://djqizrxa6f10j.cloudfront.net", "https://ec.1nax.app"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://*.ecwid.com", "https://fonts.googleapis.com", "https://ec.1nax.app"],
       imgSrc: ["'self'", "data:", "https://*.ecwid.com", "https://images-cdn.ecwid.com"],
       connectSrc: ["'self'", "https://*.ecwid.com", "https://ec.1nax.app", "https://*.cloudfront.net"],
       frameSrc: ["'self'", "https://app.ecwid.com", "https://*.ecwid.com"],
