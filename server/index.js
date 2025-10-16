@@ -208,10 +208,31 @@ app.get('/api/proxy/product/:storeId/:productId', async (req, res) => {
     }
     
     logger.info(`[PROXY] Store ${storeId} found, fetching product ${productId}`);
-    const EcwidApiService = (await import('./services/EcwidApiService.js')).default;
-    const product = await EcwidApiService.getProduct(storeId, store.access_token, productId);
-    logger.info(`[PROXY] Product ${productId} fetched successfully`);
-    res.json({ success: true, product });
+    
+    // Try to get product from database first (includes options)
+    const ProductService = (await import('./data/ProductService.js')).default;
+    const productService = new ProductService();
+    const product = await productService.findByStoreAndEcwidId(storeId, productId);
+    
+    if (product) {
+      logger.info(`[PROXY] Product ${productId} found in database with options`);
+      // Parse options from JSON string if needed
+      if (typeof product.options === 'string') {
+        try {
+          product.options = JSON.parse(product.options);
+        } catch (e) {
+          product.options = [];
+        }
+      }
+      res.json({ success: true, product });
+    } else {
+      // Fallback to Ecwid API if not in database
+      logger.info(`[PROXY] Product ${productId} not in database, trying Ecwid API`);
+      const EcwidApiService = (await import('./services/EcwidApiService.js')).default;
+      const apiProduct = await EcwidApiService.getProduct(storeId, store.access_token, productId);
+      logger.info(`[PROXY] Product ${productId} fetched from Ecwid API`);
+      res.json({ success: true, product: apiProduct });
+    }
   } catch (err) {
     logger.error(`[PROXY] Error fetching product ${req.params.productId}:`, err.message);
     res.status(500).json({ success: false, error: 'Failed to fetch product details' });
