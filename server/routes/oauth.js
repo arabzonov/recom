@@ -202,15 +202,15 @@ router.get('/callback', async (req, res) => {
     });
 
     console.log('OAuth flow completed successfully for store:', store_id);
-    console.log('Redirecting to:', `/store/${store_id}?partner=ecwid_no_free#app:name=1faq-dev:1`);
+    console.log('Redirecting to:', `/store/${store_id}?partner=ecwid_no_free#app:name=1faq-wavy:1`);
     
     // Redirect back to the settings page
-    res.redirect(`/store/${store_id}?partner=ecwid_no_free#app:name=1faq-dev:1`);
+    res.redirect(`/store/${store_id}?partner=ecwid_no_free#app:name=1faq-wavy:1`);
   } catch (error) {
     console.error('OAuth callback error:', error);
     // Redirect back to settings page even on error
     const { store_id } = req.query;
-    res.redirect(`/store/${store_id}?partner=ecwid_no_free#app:name=1faq-dev:1&error=oauth_failed`);
+    res.redirect(`/store/${store_id}?partner=ecwid_no_free#app:name=1faq-wavy:1&error=oauth_failed`);
   }
 });
 

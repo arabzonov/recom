@@ -1,6 +1,6 @@
 ---
 description:App dev structure is
-1) the app loads from Ecwid https://my.ecwid.com/store/124288251#app:name=1faq-dev
+1) the app loads from Ecwid https://my.ecwid.com/store/124288251#app:name=1faq-wavy
 2) The Ecwid frame requests app URL: https://ec.1nax.app/, which is tunneled by cloudflare to localhost:3000
 globs:
 alwaysApply: true
