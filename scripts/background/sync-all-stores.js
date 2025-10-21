@@ -250,10 +250,13 @@ async function storeProducts(storeId, products) {
           }, 0);
         }
 
-        // Process options as JSON array containing option name, choices, price and stock
+        // Process options as JSON array with proper frontend format
         const optionsArray = [];
         if (product.options && product.options.length > 0) {
           console.log(`[SYNC] Product ${product.id} has ${product.options.length} options:`, product.options);
+          
+          // Group options by name to match frontend expectations
+          const optionGroups = {};
           product.options.forEach(option => {
             console.log(`[SYNC] Processing option "${option.name}" for product ${product.id}:`, {
               optionName: option.name,
@@ -262,32 +265,47 @@ async function storeProducts(storeId, products) {
               choices: option.choices
             });
             
+            if (!optionGroups[option.name]) {
+              optionGroups[option.name] = {
+                name: option.name,
+                type: option.type || 'SELECT',
+                required: option.required || false,
+                values: []
+              };
+            }
+            
             // Process each choice within the option
             if (option.choices && option.choices.length > 0) {
               option.choices.forEach(choice => {
                 const choiceData = {
-                  optionName: option.name,
-                  choiceText: choice.text,
+                  text: choice.text,
+                  value: choice.text,
                   priceModifier: choice.priceModifier || 0,
                   priceModifierType: choice.priceModifierType || 'ABSOLUTE',
                   stock: choice.quantityInStock || 0
                 };
                 console.log(`[SYNC] Processing choice "${choice.text}" for option "${option.name}":`, choiceData);
-                optionsArray.push(choiceData);
+                optionGroups[option.name].values.push(choiceData);
               });
             } else {
               // If no choices, create a single option entry
               const optionData = {
-                optionName: option.name,
-                choiceText: option.name,
+                text: option.name,
+                value: option.name,
                 priceModifier: option.priceModifier || 0,
                 priceModifierType: option.priceModifierType || 'ABSOLUTE',
                 stock: option.quantityInStock || 0
               };
               console.log(`[SYNC] No choices found, creating single option entry:`, optionData);
-              optionsArray.push(optionData);
+              optionGroups[option.name].values.push(optionData);
             }
           });
+          
+          // Convert grouped options to array
+          Object.values(optionGroups).forEach(option => {
+            optionsArray.push(option);
+          });
+          
           console.log(`[SYNC] Processed options for product ${product.id}:`, optionsArray);
         } else {
           console.log(`[SYNC] Product ${product.id} has no options`);
