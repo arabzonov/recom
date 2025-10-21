@@ -110,7 +110,8 @@ class ProductService extends BaseDataAccess {
       rawOptions: options,
       optionsType: typeof options,
       optionsJson: optionsJson,
-      optionsJsonLength: optionsJson.length
+      optionsJsonLength: optionsJson.length,
+      optionsJsonPreview: optionsJson.substring(0, 200) + (optionsJson.length > 200 ? '...' : '')
     });
 
     // Check if product already exists
@@ -246,6 +247,7 @@ class ProductService extends BaseDataAccess {
           options: product.options,
           hasOptions: product.options !== undefined,
           optionsType: typeof product.options,
+          optionsLength: product.options ? product.options.length : 0,
           allKeys: Object.keys(product)
         });
 

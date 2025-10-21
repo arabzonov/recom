@@ -318,14 +318,15 @@ async function storeProducts(storeId, products) {
           options: JSON.stringify(optionsArray)
         };
         
-        // Log processed product with options
+        // Log processed product with options for debugging
         if (optionsArray.length > 0) {
-          console.log(`[SYNC] Processed product ${product.id} with options:`, {
+          console.log(`[SYNC] Final processed product ${product.id} with options:`, {
             productId: product.id,
             productName: product.name,
             optionsCount: optionsArray.length,
             optionsArray: optionsArray,
-            optionsJson: processedProduct.options
+            optionsJson: processedProduct.options,
+            optionsJsonLength: processedProduct.options.length
           });
         }
         
