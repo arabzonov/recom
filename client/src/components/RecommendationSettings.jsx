@@ -283,7 +283,7 @@ const RecommendationSettings = () => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <div className="flex items-center mb-6">
           <CogIcon className="h-6 w-6 text-blue-600 mr-3" />
-          <h2 className="text-xl font-semibold text-gray-900">1Recom Settings</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Wavy Settings</h2>
         </div>
 
         <div className="text-center py-8">
@@ -309,7 +309,7 @@ const RecommendationSettings = () => {
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
       <div className="flex items-center mb-6">
         <CogIcon className="h-6 w-6 text-blue-600 mr-3" />
-        <h2 className="text-xl font-semibold text-gray-900">1Recom Settings</h2>
+        <h2 className="text-xl font-semibold text-gray-900">Wavy Settings</h2>
       </div>
 
       {message && (

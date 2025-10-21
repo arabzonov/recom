@@ -20,7 +20,7 @@ const Header = ({ sidebarOpen, setSidebarOpen }) => {
           
           <div className="ml-4 lg:ml-0">
             <h1 className="text-xl font-semibold text-gray-900">
-              1Recom
+              Wavy
             </h1>
           </div>
         </div>

@@ -32,7 +32,7 @@ const Navigation = () => {
             <div className="flex-shrink-0 flex items-center">
               <Link to="/" className="flex items-center">
                 <HomeIcon className="h-8 w-8 text-blue-600" />
-                <span className="ml-2 text-xl font-bold text-gray-900">1Recom</span>
+                <span className="ml-2 text-xl font-bold text-gray-900">Wavy</span>
               </Link>
             </div>
             <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
