@@ -15,6 +15,8 @@
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
     "lint:fix": "eslint . --ext .js,.jsx,.ts,.tsx --fix",
     "sync:all": "node scripts/background/sync-all-stores.js",
+    "sync:reset": "node scripts/reset-and-sync.js",
+    "db:dump": "node scripts/dump-database.js",
     "update:ecwid-id": "node scripts/update-ecwid-app-id.js"
   },
   "keywords": [
