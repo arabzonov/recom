@@ -86,6 +86,17 @@ async function fetchStoreProducts(store) {
       console.error(`❌ Error fetching products for store ${store.store_id} (page ${pageCount}):`, error.message);
       if (error.response) {
         console.error(`❌ API Response: ${error.response.status} - ${error.response.statusText}`);
+        
+        // Clear tokens if authentication fails
+        if (error.response.status === 401 || error.response.status === 403) {
+          console.log(`🚨 Authentication failed for store ${store.store_id} - clearing tokens`);
+          try {
+            await storeService.clearTokens(store.store_id);
+            console.log(`✅ Tokens cleared for store ${store.store_id} - will require re-authentication`);
+          } catch (clearError) {
+            console.error(`❌ Error clearing tokens for store ${store.store_id}:`, clearError.message);
+          }
+        }
       }
       break;
     }
@@ -135,6 +146,17 @@ async function fetchStoreOrders(store) {
       console.error(`❌ Error fetching orders for store ${store.store_id} (page ${pageCount}):`, error.message);
       if (error.response) {
         console.error(`❌ API Response: ${error.response.status} - ${error.response.statusText}`);
+        
+        // Clear tokens if authentication fails
+        if (error.response.status === 401 || error.response.status === 403) {
+          console.log(`🚨 Authentication failed for store ${store.store_id} - clearing tokens`);
+          try {
+            await storeService.clearTokens(store.store_id);
+            console.log(`✅ Tokens cleared for store ${store.store_id} - will require re-authentication`);
+          } catch (clearError) {
+            console.error(`❌ Error clearing tokens for store ${store.store_id}:`, clearError.message);
+          }
+        }
       }
       break;
     }

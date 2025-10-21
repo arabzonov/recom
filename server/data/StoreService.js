@@ -166,6 +166,19 @@ class StoreService extends BaseDataAccess {
     };
   }
 
+  /**
+   * Clear authentication tokens for a store (force re-authentication)
+   * @param {string} storeId - Ecwid store ID
+   * @returns {Promise<void>}
+   */
+  async clearTokens(storeId) {
+    await this.execute(`
+      UPDATE stores 
+      SET access_token = NULL, refresh_token = NULL, scopes = NULL
+      WHERE store_id = ?
+    `, [storeId]);
+  }
+
 }
 
 export default StoreService;
