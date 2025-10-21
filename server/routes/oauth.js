@@ -181,7 +181,7 @@ router.get('/callback', async (req, res) => {
     console.log('Saving store to database...');
     console.log('Store data:', {
       storeId: store_id,
-      storeName: storeInfo?.generalInfo?.storeName || `Store ${store_id}`,
+      storeName: storeInfo?.generalInfo?.storeName || `Ecwid Store ${store_id}`,
       hasAccessToken: !!tokenData.access_token,
       hasRefreshToken: !!tokenData.refresh_token,
       scopes: tokenData.scope
@@ -189,7 +189,7 @@ router.get('/callback', async (req, res) => {
     
     const updatedStore = await storeService.createOrUpdate({
       storeId: store_id,
-      storeName: storeInfo?.generalInfo?.storeName || `Store ${store_id}`,
+      storeName: storeInfo?.generalInfo?.storeName || `Ecwid Store ${store_id}`,
       accessToken: tokenData.access_token,
       refreshToken: tokenData.refresh_token,
       scopes: tokenData.scope

@@ -29,9 +29,27 @@ router.post('/decode-payload', async (req, res) => {
 
     // Save store configuration to database
     try {
+      let storeName = payloadData.store_name;
+      
+      // If store name is not provided in payload, fetch it from Ecwid API
+      if (!storeName && payloadData.access_token) {
+        try {
+          const storeProfile = await EcwidApiService.getStoreProfile(payloadData.store_id, payloadData.access_token);
+          storeName = storeProfile.name || `Ecwid Store ${payloadData.store_id}`;
+        } catch (apiError) {
+          console.warn('Failed to fetch store name from API:', apiError.message);
+          storeName = `Ecwid Store ${payloadData.store_id}`;
+        }
+      }
+      
+      // Fallback if still no store name (installation default)
+      if (!storeName) {
+        storeName = `Ecwid Store ${payloadData.store_id}`;
+      }
+
       const store = await storeService.createOrUpdate({
         storeId: payloadData.store_id,
-        storeName: payloadData.store_name,
+        storeName: storeName,
         accessToken: payloadData.access_token,
         refreshToken: payloadData.refresh_token,
         scopes: payloadData.scopes
@@ -125,10 +143,28 @@ router.post('/store', async (req, res) => {
       return res.status(400).json({ error: 'Store ID is required' });
     }
 
+    let finalStoreName = storeName;
+    
+    // If store name is not provided, fetch it from Ecwid API
+    if (!finalStoreName && accessToken) {
+      try {
+        const storeProfile = await EcwidApiService.getStoreProfile(storeId, accessToken);
+        finalStoreName = storeProfile.name || `Ecwid Store ${storeId}`;
+      } catch (apiError) {
+        console.warn('Failed to fetch store name from API:', apiError.message);
+        finalStoreName = `Ecwid Store ${storeId}`;
+      }
+    }
+    
+    // Fallback if still no store name (installation default)
+    if (!finalStoreName) {
+      finalStoreName = `Ecwid Store ${storeId}`;
+    }
+
     // Create or update store
     const store = await storeService.createOrUpdate({
       storeId,
-      storeName,
+      storeName: finalStoreName,
       accessToken,
       refreshToken
     });

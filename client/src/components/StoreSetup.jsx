@@ -97,7 +97,7 @@ const StoreSetup = ({ onSetupComplete }) => {
         },
         body: JSON.stringify({
           storeId: manualStoreId.trim(),
-          storeName: `Store ${manualStoreId}`,
+          storeName: `Ecwid Store ${manualStoreId}`,
         }),
       });
 

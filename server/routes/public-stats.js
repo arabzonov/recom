@@ -69,7 +69,7 @@ router.get('/', async (req, res) => {
 
         const storeStats = {
           store_id: storeId,
-          store_name: store.store_name || storeProfile?.name || `Store ${storeId}`,
+          store_name: store.store_name || storeProfile?.name || `Ecwid Store ${storeId}`,
           product_count: productCount,
           products_with_variants: productsWithVariants[0]?.count || 0,
           category_count: categoryCount,
@@ -97,7 +97,7 @@ router.get('/', async (req, res) => {
         // If individual store fails, add error info but continue
         storesStats.push({
           store_id: store.store_id,
-          store_name: store.store_name || `Store ${store.store_id}`,
+          store_name: store.store_name || `Ecwid Store ${store.store_id}`,
           error: error.message,
           product_count: 0,
           products_with_variants: 0,
