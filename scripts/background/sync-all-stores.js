@@ -63,13 +63,28 @@ async function fetchStoreProducts(store) {
 
       const products = response.data.items || [];
       
-      // Enhanced logging for debugging compare_to from Ecwid API
+      // Enhanced logging for debugging compare_to and options from Ecwid API
       if (products.length > 0) {
         console.log(`[SYNC] Sample product from Ecwid API:`, {
           sampleProduct: products[0],
           sampleProductKeys: Object.keys(products[0]),
           hasCompareToPrice: products[0].compareToPrice !== undefined,
-          compareToPriceValue: products[0].compareToPrice
+          compareToPriceValue: products[0].compareToPrice,
+          hasOptions: products[0].options !== undefined,
+          optionsValue: products[0].options,
+          optionsLength: products[0].options ? products[0].options.length : 0
+        });
+        
+        // Log all products with options
+        products.forEach(product => {
+          if (product.options && product.options.length > 0) {
+            console.log(`[SYNC] Product ${product.id} (${product.name}) has options:`, {
+              productId: product.id,
+              productName: product.name,
+              optionsCount: product.options.length,
+              options: product.options
+            });
+          }
         });
       }
       
@@ -223,20 +238,59 @@ async function storeProducts(storeId, products) {
         // If main stock is 0, check all options stocks and sum them up
         if (totalStock === 0 && product.options && product.options.length > 0) {
           totalStock = product.options.reduce((sum, option) => {
-            return sum + option.quantityInStock;
+            if (option.choices && option.choices.length > 0) {
+              // Sum stock from all choices
+              return sum + option.choices.reduce((choiceSum, choice) => {
+                return choiceSum + (choice.quantityInStock || 0);
+              }, 0);
+            } else {
+              // Use option-level stock if no choices
+              return sum + (option.quantityInStock || 0);
+            }
           }, 0);
         }
 
-        // Process options as JSON array containing option name, price and stock
+        // Process options as JSON array containing option name, choices, price and stock
         const optionsArray = [];
         if (product.options && product.options.length > 0) {
+          console.log(`[SYNC] Product ${product.id} has ${product.options.length} options:`, product.options);
           product.options.forEach(option => {
-            optionsArray.push({
-              name: option.name,
-              price: option.priceModifier,
-              stock: option.quantityInStock
+            console.log(`[SYNC] Processing option "${option.name}" for product ${product.id}:`, {
+              optionName: option.name,
+              hasChoices: option.choices !== undefined,
+              choicesCount: option.choices ? option.choices.length : 0,
+              choices: option.choices
             });
+            
+            // Process each choice within the option
+            if (option.choices && option.choices.length > 0) {
+              option.choices.forEach(choice => {
+                const choiceData = {
+                  optionName: option.name,
+                  choiceText: choice.text,
+                  priceModifier: choice.priceModifier || 0,
+                  priceModifierType: choice.priceModifierType || 'ABSOLUTE',
+                  stock: choice.quantityInStock || 0
+                };
+                console.log(`[SYNC] Processing choice "${choice.text}" for option "${option.name}":`, choiceData);
+                optionsArray.push(choiceData);
+              });
+            } else {
+              // If no choices, create a single option entry
+              const optionData = {
+                optionName: option.name,
+                choiceText: option.name,
+                priceModifier: option.priceModifier || 0,
+                priceModifierType: option.priceModifierType || 'ABSOLUTE',
+                stock: option.quantityInStock || 0
+              };
+              console.log(`[SYNC] No choices found, creating single option entry:`, optionData);
+              optionsArray.push(optionData);
+            }
           });
+          console.log(`[SYNC] Processed options for product ${product.id}:`, optionsArray);
+        } else {
+          console.log(`[SYNC] Product ${product.id} has no options`);
         }
 
         // Enhanced logging for debugging compare_to
@@ -250,7 +304,7 @@ async function storeProducts(storeId, products) {
           });
         }
 
-        return {
+        const processedProduct = {
           id: product.id,
           name: product.name,
           price: minPrice,
@@ -263,6 +317,19 @@ async function storeProducts(storeId, products) {
           productUrl: product.url,
           options: JSON.stringify(optionsArray)
         };
+        
+        // Log processed product with options
+        if (optionsArray.length > 0) {
+          console.log(`[SYNC] Processed product ${product.id} with options:`, {
+            productId: product.id,
+            productName: product.name,
+            optionsCount: optionsArray.length,
+            optionsArray: optionsArray,
+            optionsJson: processedProduct.options
+          });
+        }
+        
+        return processedProduct;
       })
       .filter(product => {
         // Only include enabled products with stock > 0

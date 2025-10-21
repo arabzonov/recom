@@ -103,6 +103,15 @@ class ProductService extends BaseDataAccess {
 
     const categoryIdsJson = JSON.stringify(categoryIds || []);
     const optionsJson = options || '[]';
+    
+    console.log(`[ProductService] createOrUpdate options processing:`, {
+      productId: ecwidProductId,
+      productName: name,
+      rawOptions: options,
+      optionsType: typeof options,
+      optionsJson: optionsJson,
+      optionsJsonLength: optionsJson.length
+    });
 
     // Check if product already exists
     const existingProduct = await this.findByStoreAndEcwidId(storeId, ecwidProductId);
@@ -226,7 +235,7 @@ class ProductService extends BaseDataAccess {
 
     for (const product of products) {
       try {
-        // Debug logging for compareToPrice field
+        // Debug logging for compareToPrice field and options
         console.log(`[ProductService] Processing product ${product.id}:`, {
           id: product.id,
           name: product.name,
@@ -234,6 +243,9 @@ class ProductService extends BaseDataAccess {
           compareToPrice: product.compareToPrice,
           hasCompareToPrice: product.compareToPrice !== undefined,
           compareToPriceValue: product.compareToPrice,
+          options: product.options,
+          hasOptions: product.options !== undefined,
+          optionsType: typeof product.options,
           allKeys: Object.keys(product)
         });
 
