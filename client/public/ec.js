@@ -53,8 +53,8 @@
             }
 
             this.initPromise = new Promise((resolve) => {
-            if (window.Ecwid && window.Ecwid.OnAPILoaded) {
-                window.Ecwid.OnAPILoaded.add(() => {
+                if (window.Ecwid && window.Ecwid.OnAPILoaded) {
+                    window.Ecwid.OnAPILoaded.add(() => {
                         this.isInitialized = true;
                         this.storeId = window.Ecwid.getOwnerId();
                         
@@ -63,9 +63,9 @@
                         this.apiLoadCallbacks = [];
                         
                         resolve();
-                });
-            } else {
-                    // Removed console.warn('[SDK] Ecwid API not available');
+                    });
+                } else {
+                    console.error('[SDK] Ecwid API not available - this should not happen in storefront context');
                     resolve();
                 }
             });
@@ -102,8 +102,8 @@
                     // Execute all page load callbacks
                     this.pageLoadCallbacks.forEach(cb => cb(page));
                 });
-                    } else {
-                // Removed console.warn('[SDK] OnPageLoaded not available');
+            } else {
+                console.error('[SDK] OnPageLoaded not available - Ecwid SDK should be loaded');
             }
         }
 
@@ -1171,7 +1171,7 @@
                             invalidInputs.push(input);
                         }
                     } else if (input.tagName === 'INPUT' || input.tagName === 'TEXTAREA') {
-                        if (!input.value.trim()) {
+                        if (!input.value || !input.value.trim()) {
                             isValid = false;
                             invalidInputs.push(input);
                         }
@@ -1224,7 +1224,7 @@
                 });
                 
                 optionTexts.forEach(text => {
-                    if (text.value.trim()) {
+                    if (text.value && text.value.trim()) {
                         options[text.dataset.optionName] = text.value.trim();
                     }
                 });
