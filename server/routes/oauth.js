@@ -265,11 +265,7 @@ router.get('/status/:storeId', async (req, res) => {
         });
       } else {
         // Token is invalid, clear it
-        await storeService.createOrUpdate({
-          storeId,
-          accessToken: null,
-          refreshToken: null
-        });
+        await storeService.clearTokens(storeId);
         
         return res.json({
           success: true,

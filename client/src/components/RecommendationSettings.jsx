@@ -43,10 +43,32 @@ const RecommendationSettings = () => {
 
   useEffect(() => {
     if (storeId) {
-      checkSyncStatus();
+      checkTokenAndSync();
       fetchSettings();
     }
   }, [storeId]);
+
+  const checkTokenAndSync = async () => {
+    if (!storeId) return;
+
+    try {
+      // First check if token is valid
+      const oauthResponse = await fetch(`/api/oauth/status/${storeId}`);
+      const oauthData = await oauthResponse.json();
+
+      if (!oauthData.success || !oauthData.authenticated) {
+        console.log('Token validation failed, setting needsAuth to true');
+        setNeedsAuth(true);
+        return;
+      }
+
+      // Token is valid, proceed with sync check
+      await checkSyncStatus();
+    } catch (error) {
+      console.error('Error checking token and sync:', error);
+      setNeedsAuth(true);
+    }
+  };
 
   const checkSyncStatus = async () => {
     if (!storeId) return;
@@ -306,6 +328,26 @@ const RecommendationSettings = () => {
           }`}>
             {message.text}
           </span>
+        </div>
+      )}
+
+      {needsAuth && (
+        <div className="mb-6 p-4 rounded-md bg-yellow-50 border border-yellow-200 flex items-center">
+          <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 mr-3" />
+          <div className="flex-1">
+            <p className="text-sm text-yellow-800 font-medium">
+              Authentication Required
+            </p>
+            <p className="text-xs text-yellow-700 mt-1">
+              Your access token has expired. Please re-authenticate to continue using the app.
+            </p>
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            className="ml-4 bg-yellow-600 text-white px-3 py-1 rounded text-sm hover:bg-yellow-700"
+          >
+            Re-authenticate
+          </button>
         </div>
       )}
 

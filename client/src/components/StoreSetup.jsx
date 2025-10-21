@@ -34,7 +34,7 @@ const StoreSetup = ({ onSetupComplete }) => {
       // Removed logger.info('Checking store setup', { storeId });
       setSetupStatus('checking');
       
-      // First check OAuth status
+      // First check OAuth status with token validation
       // Removed logger.apiCall(`/api/oauth/status/${storeId}`, 'GET');
       const oauthResponse = await fetch(`/api/oauth/status/${storeId}`);
       const oauthData = await oauthResponse.json();
@@ -45,6 +45,11 @@ const StoreSetup = ({ onSetupComplete }) => {
         setStoreInfo(oauthData.store);
         setSetupStatus('configured');
         onSetupComplete(oauthData.store);
+        return;
+      } else if (oauthData.success && !oauthData.authenticated) {
+        // Token validation failed, need to re-authenticate
+        console.log('Token validation failed, need to re-authenticate:', oauthData.error);
+        setSetupStatus('needs_auth');
         return;
       }
 
