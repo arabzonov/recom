@@ -48,6 +48,9 @@ async function fetchStoreProducts(store) {
 
   console.log(`📦 Fetching products for store ${store.store_id}...`);
 
+  let retryCount = 0;
+  const maxRetries = 1;
+
   while (true) {
     try {
       pageCount++;
@@ -97,19 +100,49 @@ async function fetchStoreProducts(store) {
       }
 
       offset += limit;
+      retryCount = 0; // Reset retry count on success
     } catch (error) {
       console.error(`❌ Error fetching products for store ${store.store_id} (page ${pageCount}):`, error.message);
       if (error.response) {
         console.error(`❌ API Response: ${error.response.status} - ${error.response.statusText}`);
         
-        // Clear tokens if authentication fails
-        if (error.response.status === 401 || error.response.status === 403) {
-          console.log(`🚨 Authentication failed for store ${store.store_id} - clearing tokens`);
+        // Try to refresh token if authentication fails
+        if ((error.response.status === 401 || error.response.status === 403) && retryCount < maxRetries) {
+          console.log(`🚨 Authentication failed for store ${store.store_id} - attempting to refresh token...`);
           try {
-            await storeService.clearTokens(store.store_id);
-            console.log(`✅ Tokens cleared for store ${store.store_id} - will require re-authentication`);
-          } catch (clearError) {
-            console.error(`❌ Error clearing tokens for store ${store.store_id}:`, clearError.message);
+            const ECWID_CLIENT_ID = process.env.ECWID_CLIENT_ID;
+            const ECWID_CLIENT_SECRET = process.env.ECWID_CLIENT_SECRET;
+            
+            if (!ECWID_CLIENT_ID || !ECWID_CLIENT_SECRET) {
+              throw new Error('OAuth credentials not configured');
+            }
+            
+            const newAccessToken = await storeService.refreshAccessToken(
+              store.store_id, 
+              ECWID_CLIENT_ID, 
+              ECWID_CLIENT_SECRET
+            );
+            
+            console.log(`✅ Successfully refreshed token for store ${store.store_id}`);
+            
+            // Update the store object with the new token
+            store.access_token = newAccessToken;
+            
+            // Retry the same request
+            retryCount++;
+            pageCount--; // Retry the same page
+            continue;
+            
+          } catch (refreshError) {
+            console.error(`❌ Failed to refresh token for store ${store.store_id}:`, refreshError.message);
+            
+            // If refresh fails, clear tokens to force re-authentication
+            try {
+              await storeService.clearTokens(store.store_id);
+              console.log(`⚠️  Tokens cleared for store ${store.store_id} - will require re-authentication`);
+            } catch (clearError) {
+              console.error(`❌ Error clearing tokens for store ${store.store_id}:`, clearError.message);
+            }
           }
         }
       }
@@ -134,6 +167,9 @@ async function fetchStoreOrders(store) {
 
   console.log(`📋 Fetching orders for store ${store.store_id}...`);
 
+  let retryCount = 0;
+  const maxRetries = 1;
+
   while (true) {
     try {
       pageCount++;
@@ -157,19 +193,49 @@ async function fetchStoreOrders(store) {
       }
 
       offset += limit;
+      retryCount = 0; // Reset retry count on success
     } catch (error) {
       console.error(`❌ Error fetching orders for store ${store.store_id} (page ${pageCount}):`, error.message);
       if (error.response) {
         console.error(`❌ API Response: ${error.response.status} - ${error.response.statusText}`);
         
-        // Clear tokens if authentication fails
-        if (error.response.status === 401 || error.response.status === 403) {
-          console.log(`🚨 Authentication failed for store ${store.store_id} - clearing tokens`);
+        // Try to refresh token if authentication fails
+        if ((error.response.status === 401 || error.response.status === 403) && retryCount < maxRetries) {
+          console.log(`🚨 Authentication failed for store ${store.store_id} - attempting to refresh token...`);
           try {
-            await storeService.clearTokens(store.store_id);
-            console.log(`✅ Tokens cleared for store ${store.store_id} - will require re-authentication`);
-          } catch (clearError) {
-            console.error(`❌ Error clearing tokens for store ${store.store_id}:`, clearError.message);
+            const ECWID_CLIENT_ID = process.env.ECWID_CLIENT_ID;
+            const ECWID_CLIENT_SECRET = process.env.ECWID_CLIENT_SECRET;
+            
+            if (!ECWID_CLIENT_ID || !ECWID_CLIENT_SECRET) {
+              throw new Error('OAuth credentials not configured');
+            }
+            
+            const newAccessToken = await storeService.refreshAccessToken(
+              store.store_id, 
+              ECWID_CLIENT_ID, 
+              ECWID_CLIENT_SECRET
+            );
+            
+            console.log(`✅ Successfully refreshed token for store ${store.store_id}`);
+            
+            // Update the store object with the new token
+            store.access_token = newAccessToken;
+            
+            // Retry the same request
+            retryCount++;
+            pageCount--; // Retry the same page
+            continue;
+            
+          } catch (refreshError) {
+            console.error(`❌ Failed to refresh token for store ${store.store_id}:`, refreshError.message);
+            
+            // If refresh fails, clear tokens to force re-authentication
+            try {
+              await storeService.clearTokens(store.store_id);
+              console.log(`⚠️  Tokens cleared for store ${store.store_id} - will require re-authentication`);
+            } catch (clearError) {
+              console.error(`❌ Error clearing tokens for store ${store.store_id}:`, clearError.message);
+            }
           }
         }
       }

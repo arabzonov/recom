@@ -167,6 +167,64 @@ class StoreService extends BaseDataAccess {
   }
 
   /**
+   * Refresh access token using refresh token
+   * @param {string} storeId - Ecwid store ID
+   * @param {string} clientId - OAuth client ID
+   * @param {string} clientSecret - OAuth client secret
+   * @returns {Promise<string>} New access token
+   */
+  async refreshAccessToken(storeId, clientId, clientSecret) {
+    const store = await this.findByStoreId(storeId);
+    
+    if (!store) {
+      throw new Error(`Store ${storeId} not found`);
+    }
+    
+    if (!store.refresh_token) {
+      throw new Error(`No refresh token available for store ${storeId}`);
+    }
+
+    console.log(`🔄 Attempting to refresh access token for store ${storeId}...`);
+
+    const tokenResponse = await fetch('https://my.ecwid.com/api/oauth/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        grant_type: 'refresh_token',
+        client_id: clientId,
+        client_secret: clientSecret,
+        refresh_token: store.refresh_token
+      })
+    });
+
+    if (!tokenResponse.ok) {
+      const errorData = await tokenResponse.json().catch(() => ({}));
+      console.error(`❌ Failed to refresh token for store ${storeId}:`, errorData);
+      throw new Error(`Token refresh failed: ${errorData.error || tokenResponse.statusText}`);
+    }
+
+    const tokenData = await tokenResponse.json();
+    
+    if (!tokenData.access_token) {
+      throw new Error('No access token in refresh response');
+    }
+
+    console.log(`✅ Successfully refreshed access token for store ${storeId}`);
+
+    // Update tokens in database
+    await this.updateTokens(
+      storeId,
+      tokenData.access_token,
+      tokenData.refresh_token || store.refresh_token, // Use new refresh token if provided, otherwise keep old one
+      tokenData.scope || store.scopes
+    );
+
+    return tokenData.access_token;
+  }
+
+  /**
    * Clear authentication tokens for a store (force re-authentication)
    * @param {string} storeId - Ecwid store ID
    * @returns {Promise<void>}

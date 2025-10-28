@@ -264,14 +264,39 @@ router.get('/status/:storeId', async (req, res) => {
           }
         });
       } else {
-        // Token is invalid, clear it
-        await storeService.clearTokens(storeId);
-        
-        return res.json({
-          success: true,
-          authenticated: false,
-          error: 'Access token expired'
-        });
+        // Token is invalid, try to refresh it
+        console.log(`🔄 Access token invalid for store ${storeId}, attempting to refresh...`);
+        try {
+          const newAccessToken = await storeService.refreshAccessToken(
+            storeId, 
+            ECWID_CLIENT_ID, 
+            ECWID_CLIENT_SECRET
+          );
+          
+          console.log(`✅ Successfully refreshed token for store ${storeId}`);
+          
+          return res.json({
+            success: true,
+            authenticated: true,
+            store: {
+              store_id: store.store_id,
+              store_name: store.store_name,
+              access_token: newAccessToken
+            },
+            refreshed: true
+          });
+        } catch (refreshError) {
+          console.error(`❌ Failed to refresh token for store ${storeId}:`, refreshError.message);
+          
+          // If refresh fails, clear tokens to force re-authentication
+          await storeService.clearTokens(storeId);
+          
+          return res.json({
+            success: true,
+            authenticated: false,
+            error: 'Access token expired and refresh failed'
+          });
+        }
       }
     } catch (apiError) {
       return res.json({
