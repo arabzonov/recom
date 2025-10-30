@@ -114,6 +114,34 @@ app.get('/ec.css', (req, res) => {
   res.sendFile(path.join(__dirname, '../client/public/ec.css'));
 });
 
+// Serve ec-dev.js with CORS headers for widget scenarios
+app.get('/ec-dev.js', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Content-Type', 'application/javascript');
+  // If the file exists, serve it. If not, send empty 200 for widget compatibility.
+  try {
+    res.sendFile(path.join(__dirname, '../client/public/ec-dev.js'));
+  } catch (e) {
+    res.status(200).send('// ec-dev.js (missing, stub response)');
+  }
+});
+
+// Serve ec-dev.css with CORS headers for widget scenarios
+app.get('/ec-dev.css', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  res.setHeader('Content-Type', 'text/css');
+  // If the file exists, serve it. If not, send empty 200 for widget compatibility.
+  try {
+    res.sendFile(path.join(__dirname, '../client/public/ec-dev.css'));
+  } catch (e) {
+    res.status(200).send('/* ec-dev.css (missing, stub response) */');
+  }
+});
+
 // Security middleware
 app.use(helmet({
   contentSecurityPolicy: {
