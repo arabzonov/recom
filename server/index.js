@@ -112,7 +112,17 @@ app.get('/ec.css', (req, res) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Content-Type', 'text/css');
-  res.sendFile(path.join(__dirname, '../client/public/ec.css'));
+  const tryPaths = [
+    path.join(__dirname, '../client/public/ec.css'),
+    path.join(__dirname, '../dist/ec.css'),
+    path.join(__dirname, 'ec.css'),
+  ];
+  for (const filePath of tryPaths) {
+    if (fs.existsSync(filePath)) {
+      return res.sendFile(filePath);
+    }
+  }
+  return res.status(200).send('/* ec.css not found, sending stub from server */');
 });
 
 // Serve ec-dev.js with CORS headers for widget scenarios
