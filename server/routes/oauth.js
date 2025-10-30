@@ -287,10 +287,7 @@ router.get('/status/:storeId', async (req, res) => {
           });
         } catch (refreshError) {
           console.error(`❌ Failed to refresh token for store ${storeId}:`, refreshError.message);
-          
-          // If refresh fails, clear tokens to force re-authentication
-          await storeService.clearTokens(storeId);
-          
+          // DO NOT clear tokens. Notify UI they must prompt re-auth.
           return res.json({
             success: true,
             authenticated: false,

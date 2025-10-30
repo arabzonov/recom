@@ -135,14 +135,8 @@ async function fetchStoreProducts(store) {
             
           } catch (refreshError) {
             console.error(`❌ Failed to refresh token for store ${store.store_id}:`, refreshError.message);
-            
-            // If refresh fails, clear tokens to force re-authentication
-            try {
-              await storeService.clearTokens(store.store_id);
-              console.log(`⚠️  Tokens cleared for store ${store.store_id} - will require re-authentication`);
-            } catch (clearError) {
-              console.error(`❌ Error clearing tokens for store ${store.store_id}:`, clearError.message);
-            }
+            // DO NOT clear tokens! Leave as is; admin can re-auth if needed
+            break; // Move to next store (don't retry further)
           }
         }
       }
@@ -228,14 +222,8 @@ async function fetchStoreOrders(store) {
             
           } catch (refreshError) {
             console.error(`❌ Failed to refresh token for store ${store.store_id}:`, refreshError.message);
-            
-            // If refresh fails, clear tokens to force re-authentication
-            try {
-              await storeService.clearTokens(store.store_id);
-              console.log(`⚠️  Tokens cleared for store ${store.store_id} - will require re-authentication`);
-            } catch (clearError) {
-              console.error(`❌ Error clearing tokens for store ${store.store_id}:`, clearError.message);
-            }
+            // DO NOT clear tokens! Leave as is; admin can re-auth if needed
+            break; // Move to next store (don't retry further)
           }
         }
       }
@@ -265,9 +253,11 @@ async function storeProducts(storeId, products) {
     }
     
     // DELETE: Remove all existing products for this store
-    console.log(`🗑️  Deleting existing products for store ${storeId}...`);
-    const deleteResult = await productService.deleteByStoreId(storeId);
-    console.log(`🗑️  Deleted ${deleteResult} existing products for store ${storeId}`);
+    // console.log(`🗑️  Deleting existing products for store ${storeId}...`);
+    // const deleteResult = await productService.deleteByStoreId(storeId);
+    // console.log(`🗑️  Deleted ${deleteResult} existing products for store ${storeId}`);
+    //
+    // WARNING: Never delete products automatically in background sync. Use scripts/manual-clear-store-products.js if full resync is needed.
     
     // Process products to calculate minimum prices from variants and filter enabled products
     console.log(`⚙️  Processing ${products.length} products for store ${storeId}...`);
@@ -458,9 +448,11 @@ async function storeOrders(storeId, orders) {
     }
     
     // DELETE: Remove all existing orders for this store
-    console.log(`🗑️  Deleting existing orders for store ${storeId}...`);
-    const deleteResult = await orderService.deleteByStoreId(storeId);
-    console.log(`🗑️  Deleted ${deleteResult} existing orders for store ${storeId}`);
+    // console.log(`🗑️  Deleting existing orders for store ${storeId}...`);
+    // const deleteResult = await orderService.deleteByStoreId(storeId);
+    // console.log(`🗑️  Deleted ${deleteResult} existing orders for store ${storeId}`);
+    //
+    // WARNING: Never delete orders automatically in background sync. Use scripts/manual-clear-store-orders.js if full resync is needed.
     
     // INSERT: Insert all current orders from API
     console.log(`💾 Inserting ${orders.length} orders into database...`);
