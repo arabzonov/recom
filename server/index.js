@@ -6,6 +6,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { initializeDatabase, closeDatabase } from './config/database.js';
+import fs from 'fs'; // add at the top
 
 // Load environment variables from .env file
 dotenv.config();
@@ -120,11 +121,11 @@ app.get('/ec-dev.js', (req, res) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Content-Type', 'application/javascript');
-  // If the file exists, serve it. If not, send empty 200 for widget compatibility.
-  try {
-    res.sendFile(path.join(__dirname, '../client/public/ec-dev.js'));
-  } catch (e) {
-    res.status(200).send('// ec-dev.js (missing, stub response)');
+  const filePath = path.join(__dirname, '../client/public/ec-dev.js');
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(200).send('// ec-dev.js (stub version, file is missing)');
   }
 });
 
@@ -134,11 +135,11 @@ app.get('/ec-dev.css', (req, res) => {
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   res.setHeader('Content-Type', 'text/css');
-  // If the file exists, serve it. If not, send empty 200 for widget compatibility.
-  try {
-    res.sendFile(path.join(__dirname, '../client/public/ec-dev.css'));
-  } catch (e) {
-    res.status(200).send('/* ec-dev.css (missing, stub response) */');
+  const filePath = path.join(__dirname, '../client/public/ec-dev.css');
+  if (fs.existsSync(filePath)) {
+    res.sendFile(filePath);
+  } else {
+    res.status(200).send('/* ec-dev.css (stub version, file is missing) */');
   }
 });
 
