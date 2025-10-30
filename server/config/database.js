@@ -34,7 +34,34 @@ const createDatabaseConnection = () => {
 // Database initialization
 const initializeDatabase = async () => {
   return new Promise((resolve, reject) => {
-    resolve();
+    const db = createDatabaseConnection();
+
+    // Check if the core table exists; if not, bootstrap schema from setup.sql
+    db.get("SELECT name FROM sqlite_master WHERE type='table' AND name='stores'", [], (err, row) => {
+      if (err) {
+        return reject(err);
+      }
+
+      if (row) {
+        // Schema already present
+        return resolve();
+      }
+
+      // Load and execute setup.sql to create schema
+      try {
+        const setupPath = path.join(__dirname, '../setup.sql');
+        const sql = fs.readFileSync(setupPath, 'utf8');
+
+        db.exec(sql, (execErr) => {
+          if (execErr) {
+            return reject(execErr);
+          }
+          resolve();
+        });
+      } catch (readErr) {
+        reject(readErr);
+      }
+    });
   });
 };
 
