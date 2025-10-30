@@ -19,6 +19,7 @@ const ECWID_SCOPES = process.env.ECWID_SCOPES;
 
 // Generate OAuth authorization URL
 router.get('/auth/:storeId', async (req, res) => {
+  console.log(`[ROUTE] /auth/${req.params.storeId}`);
   try {
     const { storeId } = req.params;
     
@@ -78,6 +79,7 @@ router.get('/auth/:storeId', async (req, res) => {
       authUrl: authUrl.toString()
     });
   } catch (error) {
+    console.error(`[ERROR] /auth/${req.params.storeId}:`, error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to generate OAuth URL',
@@ -216,6 +218,7 @@ router.get('/callback', async (req, res) => {
 
 // Check OAuth status for a store
 router.get('/status/:storeId', async (req, res) => {
+  console.log(`[ROUTE] /status/${req.params.storeId}`);
   try {
     const { storeId } = req.params;
     
@@ -303,6 +306,7 @@ router.get('/status/:storeId', async (req, res) => {
       });
     }
   } catch (error) {
+    console.error(`[ERROR] /status/${req.params.storeId}:`, error);
     res.status(500).json({ 
       success: false,
       error: 'Failed to check OAuth status',

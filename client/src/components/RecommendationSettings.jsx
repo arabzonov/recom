@@ -57,7 +57,7 @@ const RecommendationSettings = () => {
       const oauthData = await oauthResponse.json();
 
       if (!oauthData.success || !oauthData.authenticated) {
-        console.log('Token validation failed, setting needsAuth to true');
+        console.warn('Token validation failed, setting needsAuth to true:', oauthData);
         setNeedsAuth(true);
         return;
       }
@@ -241,31 +241,32 @@ const RecommendationSettings = () => {
   };
 
   const handleAuthorize = async () => {
-    if (!storeId) return;
+    if (!storeId) {
+      console.error('handleAuthorize called but storeId is missing!');
+      return;
+    }
 
     try {
-      // Removed logger.info('Starting OAuth authorization', { storeId });
-      
+      console.log('Starting OAuth authorization request', { storeId });
       const response = await fetch(`/api/oauth/auth/${storeId}`);
-
       const data = await response.json();
+      console.log('OAuth authorization response:', data);
 
       if (data.success && data.authUrl) {
-        // Redirect to OAuth authorization URL
         window.location.href = data.authUrl;
       } else {
         setMessage({
           type: 'error',
           text: data.error || 'Failed to start authorization'
         });
-        // Removed logger.error('OAuth authorization failed', data);
+        console.error('OAuth authorization failed', data);
       }
     } catch (error) {
       setMessage({
         type: 'error',
         text: 'Network error during authorization'
       });
-      // Removed logger.error('Error starting OAuth authorization', error);
+      console.error('Error starting OAuth authorization', error);
     }
   };
 
