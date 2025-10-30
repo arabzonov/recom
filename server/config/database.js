@@ -7,7 +7,9 @@ const { verbose } = sqlite3;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DB_PATH = path.join(__dirname, '../../data/ecwid_plugin.db');
+// Allow overriding DB path via environment for persistent disks (e.g., Render /var/data)
+const DEFAULT_DB_PATH = path.join(__dirname, '../../data/ecwid_plugin.db');
+const DB_PATH = process.env.DB_PATH || DEFAULT_DB_PATH;
 
 // Ensure data directory exists
 const dataDir = path.dirname(DB_PATH);
