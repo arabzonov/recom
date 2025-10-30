@@ -222,6 +222,16 @@ app.use('/api/sync', syncRoutes);
 app.use('/api/store-stats', storeStatsRoutes);
 app.use('/stats', publicStatsRoutes);
 
+// Ensure CORS on all proxy API requests for storefront widgets
+app.use('/api/proxy', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With');
+  res.setHeader('Access-Control-Max-Age', '86400');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+  next();
+});
+
 // Proxy endpoint to fetch product details (including options)
 app.get('/api/proxy/product/:storeId/:productId', async (req, res) => {
   try {
